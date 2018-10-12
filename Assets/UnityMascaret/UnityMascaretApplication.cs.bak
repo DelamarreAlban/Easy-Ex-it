@@ -1,0 +1,703 @@
+﻿using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using Mascaret;
+using System.IO;
+using System;
+using UnityEngine.SceneManagement;
+
+public class UnityMascaretApplication : MonoBehaviour
+{
+    //public Dictionary<string, TextAsset> XMLFiles = new Dictionary<string, TextAsset> ();
+
+    public TextAsset modFile;
+	public TextAsset masFile;
+	public TextAsset envFile;
+
+    private CallProcedureBehaviorExecution procedureBehaviorExecution;
+
+    public CallProcedureBehaviorExecution ProcedureBehaviorExecution
+    {
+        get
+        {
+            return procedureBehaviorExecution;
+        }
+
+        set
+        {
+            procedureBehaviorExecution = value;
+        }
+    }
+
+
+    #region Useless
+    [HideInInspector]
+    public Vector2 scrollPosition;
+    [HideInInspector]
+    public bool showmenu;
+    public string procedure;
+    #endregion
+
+    #region Simulation
+    [HideInInspector]
+    public UnityEngine.Camera camera_principale;
+    [HideInInspector]
+    public GameObject tech;
+    #endregion
+
+	public bool loadAll = true;
+
+    public bool paused = false;
+
+    public bool online = false;
+    HttpRequestHandler httpHandler = new HttpRequestHandler();
+    public string serverURL = "http://localhost:3002";
+
+    public bool recording = true;
+    Recorder recorder;
+
+    public bool replay = false;
+    public string ReplayFilePath = @"/Resources/" + "tracking_log.xml";
+
+    List<string> currentNodes = new List<string>();
+    bool procedureStarted = false;
+
+    private VRApplication m_Mascaret;
+    public VRApplication Mascaret
+    {
+        get { return this.m_Mascaret; }
+        set { m_Mascaret = value; }
+    }
+
+    
+
+    public string m_BaseDir;
+    public string m_ApplicationFile;
+
+	public bool m_DebugMode = true;
+
+	private List<string> m_KeyPressed = new List<string>();
+
+    
+	void Awake()
+	{
+        //if (GetComponent<Storyboarder>().firstTime)
+        //{
+            // Initialisation of Mascaret
+            m_Mascaret = VRApplication.Instance;
+            m_Mascaret.window = new UnityWindow3D();
+            m_Mascaret.VRComponentFactory = new UnityVirtualRealityComponentFactory();
+            m_Mascaret.window.addPeripheric(new UnityKeyboard());
+            m_Mascaret.window.addPeripheric(new UnityMouse());
+            //m_Mascaret.Log += new LogHandler((message) => { Debug.LogWarning("Mascaret Message :" + message); });
+            //m_Mascaret.parse(m_ApplicationFile, Application.dataPath + "/StreamingAssets/" + m_BaseDir + "/", loadAll);
+
+            m_Mascaret.parse(m_ApplicationFile, "", loadAll);
+
+            //m_Mascaret.parse(m_ApplicationFile, Application.streamingAssetsPath + m_BaseDir + "/", loadAll);
+
+        //}
+    }
+    
+	void Start()
+	{
+
+        tech = GameObject.Find("char_avatar_h_parent_MESH");
+        if (showmenu)
+        {
+        }
+
+		//camera_principale = GameObject.Find ("Camera_principale").GetComponent<UnityEngine.Camera> ();
+		//camera_principale = GameObject.Find ("Main Camera").GetComponent<UnityEngine.Camera> ();
+
+		if (procedure != "") 
+		{
+			startProcedure(procedure);
+		}
+        recorder = GameObject.Find("Recorder").GetComponent<Recorder>();
+    }
+
+    int screenshotIndex = 0;
+    void Update()
+    {
+        m_Mascaret.step();
+        if (Input.GetKeyDown("a"))
+        {
+            Debug.Log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        }
+        /*
+        if(procedureBehaviorExecution!= null)
+            if(procedureBehaviorExecution.ProceduralBehaviors != null)
+                Debug.Log(procedureBehaviorExecution.ProceduralBehaviors.Count);
+        */
+        if (Input.GetKeyDown("space"))
+        {
+            //For each agent, set isPause of the procuderal behavior to true
+            Debug.Log("pause");
+            pause();
+
+        }
+        if(Input.GetKeyDown("p"))
+        {
+            Debug.Log("SCREENSHOT ");
+            Application.CaptureScreenshot(Application.dataPath + "/Storyboard/" + "test"+screenshotIndex + ".png");
+            screenshotIndex++;
+        }
+        if (Input.GetKeyDown("m"))
+        {
+        }
+        if (Input.GetKeyDown("t"))
+        {
+            //launchProcedure("test");
+            restart();
+        }
+        if (Input.GetKeyDown("return"))
+        {
+            executeNextNode();
+
+
+            // Agent agent = m_Mascaret.AgentPlateform.Agents["Teacher@localhost:8080"];
+            //Debug.Log("Agent : " + agentControlledbyHuman.name);
+            //ProceduralBehavior proceduralBehavior = (ProceduralBehavior)agent.getBehaviorExecutingByName("ProceduralBehavior");
+            //int counter = 0;
+            //foreach (ProcedureExecution pe in proceduralBehavior.runningProcedures)
+            //{
+            //    Debug.Log("Pe " + (counter++) + "   ");
+            //}
+
+            
+        }
+        if (Input.GetKeyDown("j"))
+        {
+            /*XmlHandler xmlHandler = new XmlHandler();
+            xmlHandler.GetObjectsFromXML(ReplayFilePath);
+            List<Dictionary<string, string>> xmlObjects = xmlHandler.Objects;
+            List<ActionNode> replayActionNodes = new List<ActionNode>();
+            foreach (Dictionary<string, string> node in xmlObjects)
+            {
+                replayActionNodes.Add(new ActionNode(node["name"], node["kind"]));
+            }*/
+            //launchProcedure("test");
+            launchProcedure("JordanIsLate");
+
+        }
+        
+        if (Input.GetKeyDown("r"))
+        {
+            replay = true;
+            recording = false;
+            recorder.IsReplay = replay;
+
+            launchProcedure("JordanIsLate", true, Application.dataPath + ReplayFilePath);
+            
+            /*
+            if(online)
+                httpHandler.GET(serverURL+"/api/unity/playRecordedVideo");
+            */
+        }
+        if (Input.GetKeyDown("p"))
+        {
+            //START RECORDING
+            //httpHandler.GET(serverURL+"/api/unity/startRecording");
+        }
+        if (Input.GetKeyDown("s"))
+        {
+            //STOP RECORDING
+            //httpHandler.GET(serverURL+"/api/unity/stopRecording");
+            cloneCurrentNodes();
+            if (currentNodes.Count != 0)
+            {
+                string nodes = currentNodes[0];
+                for(int i= 1;i < currentNodes.Count;i++)
+                {
+                    nodes += " "+currentNodes[i];
+                }
+                if (online)
+                    httpHandler.POST("string", serverURL + "/api/unity/currentNode", nodes);
+            }
+        }
+        if(currentNodes.Count != 0)
+        {
+            //List<string> localCurrentNodes = getCurrentNodes();
+            List<string> localCurrentNodes = getCurrentNodes();
+            if (!identicalLists(currentNodes, localCurrentNodes))
+            {
+                cloneCurrentNodes();
+                string nodes = currentNodes[0];
+                int nodeIndex = -1;
+                for (int i = 1; i < currentNodes.Count; i++)
+                {
+                    nodes += " " + currentNodes[i];
+                }
+                Debug.Log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+                Debug.Log("NEW CURRENT NODES : " + nodes);
+                if(online)
+                    httpHandler.POST("string", serverURL + "/api/unity/currentNode", nodes);
+                
+            }                     
+        }
+    }
+
+    public void restart()
+    {
+        Debug.Log("RESTART");
+        //procedureBehaviorExecution.ProceduralBehaviors.
+        
+
+        int scene = SceneManager.GetActiveScene().buildIndex;
+        SceneManager.LoadScene(scene);
+
+        
+        Debug.Log("New scene loaded");
+
+        //BehaviorScheduler.Instance.destroyInstance();
+        //BehaviorScheduler bs = BehaviorScheduler.Instance;
+
+        //Debug.Log(GameObject.f )
+
+
+        //procedureBehaviorExecution = 
+
+        //GameObject.Find("Storyboarder").GetComponent<Storyboarder>().SAVE_procedureBehaviorExecution;
+        //m_Mascaret = GameObject.Find("Storyboarder").GetComponent<Storyboarder>().vrApp;
+        //launchProcedure("JordanIsLate");
+    }
+
+
+
+    public void pause()
+    {
+        paused = !paused;
+        BehaviorScheduler.Instance.setSuspended(paused);
+
+
+        //get navmeshAgent
+        GameObject teacher = GameObject.FindGameObjectWithTag("Player");
+            
+        if (paused)
+        {
+            //Freeze students animator
+            GameObject[] students = GameObject.FindGameObjectsWithTag("student");
+            foreach (GameObject student in students)
+            {
+                student.GetComponent<Animator>().speed = 0;
+            }
+            teacher.GetComponent<UnityEngine.AI.NavMeshAgent>().Stop();
+            Debug.Log("=================================== PAUSED ===================================");
+            if (online)
+                httpHandler.GET(serverURL + "/api/unity/pauseRecordedVideo");
+        }
+        else
+        {
+            //Freeze students animator
+            GameObject[] students = GameObject.FindGameObjectsWithTag("student");
+            foreach (GameObject student in students)
+            {
+                student.GetComponent<Animator>().speed = 1;
+            }
+            teacher.GetComponent<UnityEngine.AI.NavMeshAgent>().Resume();
+            Debug.Log("=================================== RESUME ===================================");
+            if (online)
+                httpHandler.GET(serverURL + "/api/unity/resumeRecordedVideo");
+        }
+        
+    }
+
+    public void cloneCurrentNodes()
+    {
+        List<string> localCurrentNodes = getCurrentNodes();
+        currentNodes = new List<string>();
+        foreach (string s in localCurrentNodes)
+            currentNodes.Add(s);
+    }
+
+    public bool identicalLists(List<string> l1, List<string> l2)
+    {
+        if(l1.Count !=0 && l2.Count !=0)
+        {
+            if (l1.Count == l2.Count)
+            {
+                for (int i = 0; i < l1.Count; i++)
+                {
+                    if (l1[i] != l2[i])
+                        return false;
+                }
+            }
+            else
+                return false;
+        }
+        return true;
+    }
+
+    public void launchOperation(ActionNode action, Agent agt, ProcedureExecution procInfo)
+    {
+        ProceduralBehavior proceduralBehavior = (ProceduralBehavior)(agt.getBehaviorExecutingByName("ProceduralBehavior"));
+        action.start(agt, procInfo.getAffectations(), false);
+        proceduralBehavior.sendActionRealisationMessage(action, procInfo);
+        procInfo.informActionRunning(agt.Aid, action);
+
+        if (action.CurrentExecution != null)
+        {
+            proceduralBehavior.BehaviorToNode.Add(action.CurrentExecution, action);
+            action.CurrentExecution.addCallbackOnBehaviorStop(onBehaviorStop);
+        }
+        else
+        {
+            procInfo.informActionDone(agt.Aid, action); //TODO
+            proceduralBehavior.sendActionDoneMessage(action, procInfo);
+        }
+    }
+
+    public void onBehaviorStop(BehaviorExecution be)
+    {
+        ProceduralBehavior proceduralBehavior = (ProceduralBehavior)(getControlledAgent().getBehaviorExecutingByName("ProceduralBehavior"));
+        for (int iP = 0; iP < proceduralBehavior.RunningProcedures.Count; iP++)
+        {
+            ProcedureExecution procInfo = proceduralBehavior.runningProcedures[iP];
+            procInfo.informActionDone(((Agent)(proceduralBehavior.Host)).Aid, proceduralBehavior.BehaviorToNode[be]);
+            proceduralBehavior.sendActionDoneMessage(proceduralBehavior.BehaviorToNode[be], procInfo);
+        }
+
+        //restart();
+        proceduralBehavior.ispause = false;
+    }
+
+    public List<string> getCurrentNodes()
+    {
+        List<string> localCurrentNodes = new List<string>();
+        List<ProceduralBehavior> proceduralBehaviors = ProcedureBehaviorExecution.ProceduralBehaviors;
+        //Dictionary<string, Agent> agents = m_Mascaret.AgentPlateform.Agents;
+        //foreach (KeyValuePair<string, Agent> a in agents)
+        //    Debug.Log(a.Key);
+        Agent agent = m_Mascaret.AgentPlateform.Agents["Recorder@localhost:8080"];
+        //Agent agent = m_Mascaret.AgentPlateform.Agents["Recorder@localhost:8080"];
+        //Debug.Log("Agent : " + agentControlledbyHuman.name);
+        ProceduralBehavior proceduralBehavior = (ProceduralBehavior)agent.getBehaviorExecutingByName("ProceduralBehavior");
+        if (proceduralBehavior != null && proceduralBehavior.runningProcedures.Count !=0)
+        {
+            ProcedureExecution procExec = proceduralBehavior.runningProcedures[0];
+            //Debug.Log("Procedure : " + proceduralBehavior.RunningProcedures.Count);
+            List<ActivityNode> activeNodes = new List<ActivityNode>();
+            foreach (ActivityExecutionToken t in procExec.getActiveToken())
+            {
+                List<ActivityPartition> partitions = t.currentLocation.Partitions;
+                foreach (ActivityPartition p in partitions)
+                {
+                    if (p.name != "Recorder")
+                    {
+                        //Debug.Log("NODE : " + t.currentLocation.name);
+                        localCurrentNodes.Add(t.currentLocation.name);
+                    }
+                }
+            }
+        }
+        return localCurrentNodes;
+    }
+
+    public void executeNextNode()
+    {
+        Debug.Log("ExecuteNextNode");
+        CallProcedureAction action = ProcedureBehaviorExecution.action;
+
+        List<ProceduralBehavior> proceduralBehaviors = ProcedureBehaviorExecution.ProceduralBehaviors;
+        Agent agentControlledbyHuman = getControlledAgent();
+        Debug.Log("Agent : " + agentControlledbyHuman.name);
+        ProceduralBehavior proceduralBehavior = (ProceduralBehavior)agentControlledbyHuman.getBehaviorExecutingByName("ProceduralBehavior");
+        if (proceduralBehavior != null)
+        {
+            ProcedureExecution procExec = proceduralBehavior.runningProcedures[0];
+            Debug.Log("Procedure : " + proceduralBehavior.runningProcedures.Count);
+            List<ActivityNode> activeNodes = new List<ActivityNode>();
+            foreach (ActivityExecutionToken t in procExec.getActiveToken())
+                activeNodes.Add(t.currentLocation);
+            foreach (ActivityNode t in activeNodes)
+            {
+                List<ActivityPartition> partitions = t.Partitions;
+                foreach (ActivityPartition p in partitions)
+                {
+                    if (p.name != "Recorder")
+                    {
+                        List<ActionNode> outgoActions = t.getOutgoingActionNode();
+                        foreach (ActionNode n in outgoActions)
+                        { 
+                            if (!n.isRunning())
+                            {
+                                Debug.Log("Action to execute : " + n.name);
+                                launchOperation(n, agentControlledbyHuman, procExec);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public Agent getControlledAgent()
+    {
+        Dictionary<string, Agent> agents = m_Mascaret.AgentPlateform.Agents;
+        foreach(KeyValuePair<string, Agent> kvp in agents)
+        {
+            if (kvp.Value.ControlledByHuman)
+                return kvp.Value;
+            if(kvp.Value.name == "Teacher")
+                return kvp.Value;
+        }
+        return null;
+    }
+
+    public Agent getReplayAgent()
+    {
+        Dictionary<string, Agent> agents = m_Mascaret.AgentPlateform.Agents;
+        foreach (KeyValuePair<string, Agent> kvp in agents)
+        {
+            if (kvp.Value.IsReplayAgent)
+                return kvp.Value;
+        }
+        return null;
+    }
+
+    public void OnGUI()
+	{
+		if (showmenu) 
+		{
+			ShowMenuFunction();
+		}
+
+		Event current = Event.current;
+		if (current.isMouse)
+		{
+			int buttonNumber = current.button +1;
+			string buttonName = "button" + buttonNumber;
+			Button b = this.m_Mascaret.window.getPeripheric("mouse").getButton(buttonName);
+			if (Input.GetMouseButtonDown(current.button))
+				b.setPressed(true);
+			else
+				b.setPressed (false);
+		}
+		else if (current.isKey)// && camera_principale.enabled)
+		{
+			if (current.keyCode.ToString() != "None")
+			{
+				Button b = this.m_Mascaret.window.getPeripheric("keyboard").getButton(current.keyCode.ToString());
+				if(b != null) 
+				{
+					if (current.type == EventType.keyDown) 
+					{
+						if (!m_KeyPressed.Contains(current.keyCode.ToString()))
+						{
+                            if (this.m_DebugMode)
+							    Debug.Log(current.keyCode.ToString() + " / " + current.type + " : " + current.clickCount);
+							b.setPressed(true);
+							m_KeyPressed.Add(current.keyCode.ToString());
+						}
+					}
+					else if (current.type == EventType.keyUp) 
+					{
+						b.setPressed(false);
+						m_KeyPressed.Remove(current.keyCode.ToString());
+					}
+				}
+			}
+		}
+	}
+
+    private void setActionsForReplayAgent(string xmlFilePath)
+    {
+        XmlHandler xmlHandler = new XmlHandler();
+        xmlHandler.GetObjectsFromXML(xmlFilePath);
+        List<Dictionary<string, string>> xmlObjects = xmlHandler.Objects;
+        List<ActionNode> replayActionNodes = new List<ActionNode>();
+        List<long> replayActionStartDates = new List<long>();
+        List<long> replayActionEndDates = new List<long>();
+        int counter = 0;
+        foreach (Dictionary<string, string> node in xmlObjects)
+        {
+            /*Debug.Log(counter++ + " Action : " + node["name"]);
+            Debug.Log(" , Start Date : " + Convert.ToInt64(node["startDate"]));
+            Debug.Log(" , end Date : " + Convert.ToInt64(node["endDate"]));*/
+            replayActionNodes.Add(new ActionNode(node["name"], node["kind"]));
+            replayActionStartDates.Add(Convert.ToInt64(node["startDate"]));
+            replayActionEndDates.Add(Convert.ToInt64(node["endDate"]));
+        }
+        
+        Agent rplAgent = getReplayAgent();
+        Dictionary<ActionNode, Dictionary<string, long>> replayActionNodeDic = new Dictionary<ActionNode, Dictionary<string, long>>();
+        for (int i = 0; i < replayActionNodes.Count; i++)
+        {
+            Dictionary < string, long> actionDates = new Dictionary<string, long>();
+            actionDates.Add("startDate", replayActionStartDates[i]);
+            actionDates.Add("endDate", replayActionEndDates[i]);
+            replayActionNodeDic.Add(replayActionNodes[i], actionDates);
+            Debug.Log("REPLAY action : " + replayActionNodes[i].name + " at " + replayActionStartDates[i]);
+        }
+        rplAgent.ReplayActionNodeList = replayActionNodeDic;
+    }
+
+    private void launchProcedure(string procedure, bool replayBool = false, string xmlPath ="")
+    {
+        string orgEntity = null;
+        replay = replayBool;
+        recording = !replayBool;
+        recorder.Recording = recording;
+        recorder.IsReplay = replay;
+
+        List<OrganisationalStructure> structs = VRApplication.Instance.AgentPlateform.Structures;
+        foreach (OrganisationalStructure s in structs)
+        {
+            List<Procedure> procs = s.Procedures;
+            foreach (Procedure p in procs)
+            {
+                if (p.name == procedure)
+                {
+                    orgEntity = s.Entities[0].name;
+                }
+            }
+        }
+        Debug.Log("RUNNING : " + procedure + " / " + orgEntity);
+        List<Entity> entities = MascaretApplication.Instance.getEnvironment().getEntities();
+        Entity entity = entities[0];
+        Mascaret.Action action2 = null;
+        action2 = new CallProcedureAction();
+        ((CallProcedureAction)(action2)).Procedure = procedure;
+        ((CallProcedureAction)(action2)).OrganisationalEntity = orgEntity;
+
+        #region replay agent
+        if (replay)
+        {
+            setActionsForReplayAgent(xmlPath);
+            List<OrganisationalEntity> orgs = m_Mascaret.AgentPlateform.Organisations;
+            for (int iOrg = 0; iOrg < orgs.Count; iOrg++)
+            {
+                if (orgs[iOrg].name == ((CallProcedureAction)(action2)).OrganisationalEntity)
+                {
+                    orgs[iOrg].changeRoleAssignement(getControlledAgent().name, getReplayAgent());
+                }
+            }
+        }
+        #endregion
+
+        /*
+        List<BehaviorExecution> besExe = BehaviorScheduler.Instance.AllBehaviors;
+        
+        Dictionary<string, Agent> agents = m_Mascaret.AgentPlateform.Agents;
+        foreach (KeyValuePair<string, Agent> kvp in agents)
+        {
+            if (kvp.Value.BehaviorsExecution.Count > 1)
+                BehaviorScheduler.Instance.deleteExecutionBehavior(kvp.Value.BehaviorsExecution[1]);
+        }
+
+        for (int i = besExe.Count - 1; i > -1; i--)
+        {
+            Debug.Log("BE : : : : : ");
+            Debug.Log(besExe[i].Host.name);
+        }*/
+
+        List<OrganisationalEntity> orgs2 = MascaretApplication.Instance.AgentPlateform.Organisations;
+        Debug.Log("ORG");
+        Debug.Log(orgs2.Count);
+        foreach(OrganisationalEntity oge in orgs2)
+        {
+            Debug.Log(oge.name);
+            Debug.Log(oge.ToString());
+        }
+        /*if (orgs2.Count > 1)
+            orgs2.RemoveAt(1);*/
+
+        ProcedureBehaviorExecution = (CallProcedureBehaviorExecution)BehaviorScheduler.Instance.executeBehavior(action2, entity, new Dictionary<string, ValueSpecification>(), false);
+
+        Debug.Log("startProcedure #########################################################################     " + procedure);
+
+        Agent agent = VRApplication.Instance.AgentPlateform.Agents["Jordan@localhost:8080"];
+        EmbodiedAgent agt = (EmbodiedAgent)agent;
+
+        Debug.Log(agt.Body.ActiveShape);
+
+        /*
+        Dictionary<string, Agent> agents = m_Mascaret.AgentPlateform.Agents;
+        foreach (KeyValuePair<string, Agent> kvp in agents)
+        {
+            ProceduralBehavior proceduralBehavior = (ProceduralBehavior)kvp.Value.getBehaviorExecutingByName("ProceduralBehavior");
+            if (proceduralBehavior != null)
+            {
+                if (proceduralBehavior.RunningProcedures.Count > 1)
+                {
+                    Debug.Log(proceduralBehavior.RunningProcedures.Count);
+                    Debug.Log("running proc : ");
+                    ProcedureExecution pe = proceduralBehavior.RunningProcedures[proceduralBehavior.runningProcedures.Count - 1];
+
+                    if (pe.getAllActionsFor(kvp.Value.Aid).Count > 0)
+                    {
+                        foreach (ActionNode a in pe.getAllActionsFor(kvp.Value.Aid))
+                            Debug.Log(a.name);
+                        pe.stop();
+                    }
+
+                }
+            }
+        }*/
+
+    }
+
+    #region UselessMethods
+    public void ShowMenuFunction()
+    {
+        int posX = 300;
+        int posY = 150;
+        int heigth = 30;
+        int width = 300;
+        List<Procedure> allProcs = new List<Procedure>();
+        List<OrganisationalStructure> structures = VRApplication.Instance.AgentPlateform.Structures;
+        foreach (OrganisationalStructure struc in structures)
+        {
+            List<Procedure> procs = struc.Procedures;
+            foreach (Procedure proc in procs)
+            {
+                allProcs.Add(proc);
+            }
+        }
+        int nbProc = 0;
+        GUI.Box(new Rect(posX - 5, posY - 25, width + 10, (heigth + 5) * allProcs.Count + 35), "Procedures");
+        foreach (Procedure proc in allProcs)
+        {
+            if (GUI.Button(new Rect(posX, posY + ((heigth + 5) * nbProc), width, heigth), proc.name))
+            {
+                Application.LoadLevel(proc.name);
+            }
+            nbProc++;
+        }
+
+    }
+
+    private void startProcedure(string procedure)
+    {
+        string orgEntity = null;
+
+        List<OrganisationalStructure> structs = VRApplication.Instance.AgentPlateform.Structures;
+        Debug.Log(structs.Count);
+        foreach (OrganisationalStructure s in structs)
+        {
+            List<Procedure> procs = s.Procedures;
+            foreach (Procedure p in procs)
+            {
+                if (p.name == procedure)
+                {
+                    orgEntity = s.Entities[0].name;
+                }
+            }
+        }
+        if (this.m_DebugMode)
+            Debug.Log("RUNNING : " + procedure + " / " + orgEntity);
+
+        List<Entity> entities = MascaretApplication.Instance.getEnvironment().getEntities();
+        Entity entity = entities[0];
+        Mascaret.Action action2 = null;
+        action2 = new CallProcedureAction();
+        ((CallProcedureAction)(action2)).Procedure = procedure;
+        ((CallProcedureAction)(action2)).OrganisationalEntity = orgEntity;
+        ProcedureBehaviorExecution = (CallProcedureBehaviorExecution)BehaviorScheduler.Instance.executeBehavior(action2, entity, new Dictionary<string, ValueSpecification>(), false);
+    }
+    #endregion
+
+
+}
+

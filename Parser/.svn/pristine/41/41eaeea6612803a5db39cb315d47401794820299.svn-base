@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title> Vignettes parser </title>
+</head>
+<body>
+        <div> - Disruptive student name </div>
+           <input id="disruptiveName" type="text" value="Jordan" />
+        <button id="json-export-btn"> Export JSON </button>
+        <button id="speech-export-btn"> Export Speech </button>
+            <div> - Import CSV </div>
+                <input id="input-csv" type="file" />
+            <div> - Import XMI </div>
+                <input id="input-xmi" type="file"/>
+            <button id="xml-generator"> 3 - Generate XMI </button>
+            <button id="xmi-export-btn"> 4 - Export XMI </button>
+            <div id='csvdata'> </div>
+	
+<script src="https://cdnjs.cloudflare.com/ajax/libs/x2js/1.2.0/xml2json.min.js"></script>
+<script src="./js/xmiDecoder.js"></script> 
+<script src="./js/xmiGenerator.js"></script> 
+<script src="./js/csvParser.js"></script>
+</body>		
+
+</html>

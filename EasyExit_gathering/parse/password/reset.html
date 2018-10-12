@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Password Reset</title>
+  <link rel="stylesheet" href="bootstrap.min.css">
+  <style type='text/css'>
+    #login {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, #225997 0%,#7EB9E6 100%);
+      -webkit-background-size: cover;
+      -moz-background-size: cover;
+      -o-background-size: cover;
+      background-size: cover;
+    }
+    #login-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px;
+    }  
+    h1 {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="login">
+    
+      <div class="card" id="login-box">
+        <div class="card-body">
+            <h1>Reset Your Password<span id="app"></span></h1>
+            <noscript>We apologize, but resetting your password requires javascript</noscript>
+            <div class="error" id="error"></div>
+            <form id="form" action="#" method="POST">
+            
+              <div class="form-group">
+                <label for="password">New Password:</label>
+                <input type="password" class="form-control" id="password" name="new_password">
+              </div>
+
+              <div class="form-group">
+                <label for="password">Confirm New Password:</label>
+                <input type="password" class="form-control" id="password_confirm" name="confirm_new_password">
+                <small id="password_match_info" class="form-text text-danger"></small>
+              </div>
+              
+              <input name="utf-8" type="hidden" value="✓" />
+              <input name="username" id="username" type="hidden" />
+              <input name="token" id="token" type="hidden" />
+              
+              <button id="change_password" type="submit" class="btn btn-primary">Change Password</button>
+              <hr />
+              <label><i>Resetting password for: <span id="username_label"></span></i></label>
+            </form>
+        </div>
+      </div>
+
+  </div>
+  <script language="javascript" type="text/javascript">
+    window.onload = function() {
+      var urlParams = {};
+      (function () {
+          var pair, // Really a match. Index 0 is the full match; 1 & 2 are the key & val.
+              tokenize = /([^&=]+)=?([^&]*)/g,
+              // decodeURIComponents escapes everything but will leave +s that should be ' '
+              re_space = function (s) { return decodeURIComponent(s.replace(/\+/g, " ")); },
+              // Substring to cut off the leading '?'
+              querystring = window.location.search.substring(1);
+
+          while (pair = tokenize.exec(querystring))
+            urlParams[re_space(pair[1])] = re_space(pair[2]);
+      })();
+
+      var id = urlParams['id'];
+      var base = '/parse';
+      document.getElementById('form').setAttribute('action', base + '/apps/' + id + '/request_password_reset');
+      document.getElementById('username').value = urlParams['username'];
+      document.getElementById('username_label').appendChild(document.createTextNode(urlParams['username']));
+      document.getElementById("password").oninput = validatePassword;
+      document.getElementById("password_confirm").oninput = validatePassword;
+      document.getElementById("change_password").disabled = true;
+
+      document.getElementById('token').value = urlParams['token'];
+      if (urlParams['error']) {
+        document.getElementById('error').appendChild(document.createTextNode(urlParams['error']));
+      }
+      if (urlParams['app']) {
+        document.getElementById('app').appendChild(document.createTextNode(' for ' + urlParams['app']));
+      }
+      
+      function validatePassword() {
+        var pass2 = document.getElementById("password").value;
+        var pass1 = document.getElementById("password_confirm").value;
+        if(pass1 !== pass2) {
+          if(document.getElementById("password_confirm").value) {
+            document.getElementById("change_password").disabled = true;
+            document.getElementById("password_match_info").innerHTML = "Must match the previous entry";
+          }
+        } else {
+          document.getElementById("change_password").disabled = false;	 
+          document.getElementById("password_match_info").innerHTML = "";
+        }
+        //empty string means no validation error
+      }
+      
+    }
+  </script>
+</body>

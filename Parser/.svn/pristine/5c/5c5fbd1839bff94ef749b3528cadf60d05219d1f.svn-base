@@ -1,0 +1,2141 @@
+/**
+ * Created by Alban on 18/06/2017.
+ */
+
+var vignette = {};
+var disruptiveStudent = document.getElementById("disruptiveName").value;
+var teacher = "TeacherAuto";
+var fromXMI = false;
+var chart_graph = {};
+var decisionNodes = [];
+
+var activities = [];
+
+
+var fileName = "";
+
+
+/*
+document.getElementById("upload-btn").addEventListener("click", function() {
+
+    var reader = new FileReader();
+    reader.addEventListener('load', function() {
+        chart_graph = {};
+        document.getElementById('csvdata').innerText = this.result;
+        //csvFile = document.getElementById('file').innerText.toString();
+        var csvFile = this.result.toString();
+        parseCSV(csvFile);
+
+    });
+    reader.readAsText(document.querySelector('input').files[0]);
+
+});
+*/
+
+document.getElementById("input-csv").addEventListener('change', function() {
+
+    var reader = new FileReader();
+
+    reader.addEventListener('load', function() {
+
+        chart_graph = {};
+
+        document.getElementById('csvdata').innerText = this.result;
+        //csvFile = document.getElementById('file').innerText.toString();
+        var csvFile = this.result.toString();
+        parseCSV(csvFile);
+
+    });
+
+    reader.readAsText(document.querySelector("#input-csv").files[0]);
+    fileName = document.querySelector("#input-csv").files[0].name;
+    console.log("FILENAME : " + document.querySelector("#input-csv").files[0].name);
+    //console.log("lala");
+});
+
+function csv2json(csv){
+
+    var lines=csv.split("\n");
+
+    //changing the comma to pipe in the quoted value
+    for(var i=1;i<lines.length;i++) {
+        if(lines[i].includes("\"")){
+            var div = lines[i].split("\"");
+            for(var k = 1;k <div.length;k+=2){
+                    while (div[k].includes(","))
+                        div[k] = div[k].replaceAt(div[k].indexOf(","), "|");
+            }
+            lines[i] = div[0];
+            for(var k = 1;k <div.length;k++)
+                lines[i] += "\"" + div[k];
+            /*
+            var startIndex = lines[i].indexOf("\"");
+            var substring = lines[i].substring(startIndex+1,lines[i].length);
+            var stopIndex = substring.indexOf("\"") + startIndex;
+            var value = lines[i].substring(startIndex+1,stopIndex);
+            while(value.includes(",")){
+                var index = value.indexOf(",");
+                value = value.replaceAt(index,"|");
+                lines[i] = lines[i].replaceAt(1+startIndex+index,"|");
+
+            }
+            */
+        }
+    }
+
+    var result = [];
+
+    headers=lines[0].split(",");
+
+    for(var i=1;i<lines.length;i++){
+
+        var obj = {};
+        var currentLine=lines[i].split(",");
+
+        for(var j=0;j<headers.length;j++){
+            if(currentLine[j]) {
+                while (currentLine[j].includes("|")) {
+                    currentLine[j] = currentLine[j].replaceAt(currentLine[j].indexOf("|"), ",");
+                }
+                obj[headers[j]] = currentLine[j];
+            }
+        }
+
+        result.push(obj);
+
+    }
+
+    //return result; //JavaScript object
+    return result;
+}
+
+var jsonExport = {};
+var speeches = [];
+
+document.getElementById("json-export-btn").addEventListener("click", function() {
+
+    jsonExport.vignettes = exportJSON();
+    console.log("JSON EXPORT");
+    console.log(jsonExport);
+    var jsonFileName = fileName.substring(0,fileName.indexOf('.')) + ".json";
+    //xmi_text = generated_xmi.join('\n');
+    download_file(jsonFileName,JSON.stringify(jsonExport, undefined, 4));
+    document.getElementById('csvdata').innerText = JSON.stringify(jsonExport, undefined, 4);
+
+
+});
+
+document.getElementById("speech-export-btn").addEventListener("click", function() {
+
+    exportSPEECHES();
+    console.log("SPEECH EXPORT");
+    console.log(speeches.join("\n"));
+    var jsonFileName = "speech" + ".txt";
+    //xmi_text = generated_xmi.join('\n');
+    download_file(jsonFileName,speeches.join("\n"));
+    document.getElementById('csvdata').innerText = speeches.join("\n");
+
+
+});
+
+function exportJSON(){
+    var info = fileName.split('_');
+    var section = info[0];
+    var vignetteInfo = {};
+    vignetteInfo[section] = {};
+    vignetteInfo[section].avatar = info[1];
+    vignetteInfo[section].grade = info[2];
+    vignetteInfo[section].behavior = info[3];
+    vignetteInfo[section].level = info[4];
+
+    vignetteInfo[section].nodes = getNodesExportJSON();
+    vignetteInfo[section].edges = getEdgesExportJSON();
+
+    return vignetteInfo;
+}
+
+function exportSPEECHES(){
+
+    for(var ac in activities){
+        var a = activities[ac];
+        for(var n in a.nodes){
+            var node = a.nodes[n];
+            if(!speeches.includes(node.body.body) && node.role != "TeacherAuto" && node.role != "Teacher")
+                speeches.push(node.body.body);
+        }
+    }
+}
+
+function getNodesExportJSON(){
+    var nodesJSON = {};
+    for(var ac in activities){
+        var a = activities[ac];
+        for(var n in a.nodes){
+            var node = a.nodes[n];
+            var nodeInfo = getNodeExportJSON(node);
+            nodesJSON[node.id] = nodeInfo;
+        }
+    }
+    return nodesJSON;
+}
+
+function getNodeExportJSON(node){
+    var nodeInfo = {};
+    nodeInfo.name = node.name;
+    if(node.name.includes("end"))
+        nodeInfo.type = "ending";
+    else if(node.name.includes("choice"))
+        nodeInfo.type = "choice";
+    else if(node.name.includes("uml:JoinNode"))
+        nodeInfo.type = "JoinNode";
+    else if(node.name.includes("uml:ForkNode"))
+        nodeInfo.type = "ForkNode";
+    else if(node.name.includes("uml:CallBehaviorAction"))
+        nodeInfo.type = "CallBehavior";
+    else if(node.name.includes("uml:DecisionNode"))
+        nodeInfo.type = "DecisionNode";
+    else if(node.name.includes("uml:ActivityFinalNode"))
+        nodeInfo.type = "ActivityFinalNode";
+    else if(node.name.includes("uml:InitialNode"))
+        nodeInfo.type = "InitialNode";
+    else
+        nodeInfo.type = node.type;
+
+    nodeInfo.role = node.role;
+    nodeInfo.activity = node.activity;
+    //Optional
+    if(node.body && node.body.body)
+        nodeInfo.content = node.body.body;
+    else if (node.body && (typeof node.body === typeof "string"))
+        nodeInfo.content = node.body;
+    else
+        nodeInfo.content = "";
+
+    if(node.body && node.body.operation)
+        nodeInfo.operation = node.body.operation;
+    else if(node.body && node.body.behavior)
+        nodeInfo.operation = node.body.behavior;
+    else
+        nodeInfo.operation = "";
+
+    if (node.body && node.body.feedback && node.body.feedback.qualitative) {
+        nodeInfo.feedback = node.body.feedback.qualitative;
+    }
+    else
+        nodeInfo.feedback = "";
+
+    if (node.body && node.body.feedback && node.body.feedback.quantitative)
+        nodeInfo.score = node.body.feedback.quantitative;
+    else
+        nodeInfo.score = "";
+
+
+    return nodeInfo;
+}
+
+function getEdgesExportJSON(){
+    var edgesJSON = {};
+    for(var ac in activities){
+        var a = activities[ac];
+        for(var e in a.edges){
+            var edge = a.edges[e];
+            var edgeInfo = getEdgeExportJSON(edge);
+            edgesJSON[edge.id] = edgeInfo;
+        }
+    }
+    return edgesJSON;
+}
+
+function getEdgeExportJSON(edge) {
+
+    var edgeInfo = {};
+
+    edgeInfo.source = edge.source;
+    edgeInfo.target = edge.target;
+    edgeInfo.guard = edge.guard;
+    edgeInfo.type = edge.xmi_type;
+    if(edge.activity)
+        edgeInfo.activity = edge.activity;
+    else
+        edge.activity = "";
+
+
+    return edgeInfo;
+}
+
+String.prototype.replaceAt=function(index, replacement) {
+    return this.substr(0, index) + replacement+ this.substr(index + replacement.length);
+};
+
+function parseCSV(csv){
+    console.log("############################################");
+    vignette.data = csv2json(csv);
+    console.log(vignette.data);
+
+    vignette.page = [];
+    vignette.node = [];
+    vignette.line = [];
+    for(var e in vignette.data){
+        var element = vignette.data[e];
+        if(element.Name == "Page")
+            vignette.page.push(element);
+        else if(element.Name == "Line")
+            vignette.line.push(element);
+        else
+            vignette.node.push(element);
+    }
+    console.log("Vignette data " + vignette.data.length);
+    console.log("Vignette page " + vignette.page.length);
+    console.log("Vignette node " + vignette.node.length);
+    console.log("Vignette line " + vignette.line.length);
+    console.log(vignette.page.length + vignette.node.length +vignette.line.length);
+
+    var multipleIndex = function(input,c){
+        var result = [];
+
+        for(var i in input){
+            if(input[i] == c)
+                result.push(i);
+        }
+        return result;
+    };
+
+    //Checking csv
+    var csv_error_log = "";
+    console.log(vignette.line);
+    for(var l in vignette.line){
+        var line = vignette.line[l];
+        if(line["Line Source"] == "" && line["Line Destination"])
+            csv_error_log += "Line "+line.Id+" goes from NOTHING to " + line["Line Destination"] +"\n";
+        else if(line["Line Source"] && !line["Line Destination"])
+            csv_error_log += "Line "+line.Id+" goes from "+line["Line Source"]+" to NOTHING \n";
+        else if(line["Line Source"] == !line["Line Destination"])
+            csv_error_log += "Line "+line.Id+" loops at "+line["Line Source"]+"\n";
+    }
+    console.log(vignette.node);
+    var startNodeChecking = false;
+    for(var n in vignette.node) {
+        var node = vignette.node[n];
+        var text = node["Text Area 1"];
+        var carac2test = ['[',']','{','}','<','>'];
+        if(text) {
+            if(text.includes("START:"))
+                startNodeChecking = true;
+            if(node.Name == "Process" || node.Name == "Preparation" || node.Name == "Terminator" || node.Name == "Data (I/O)" || node.Name == "Decision") {
+                var numbers = text.split('.');
+                numbers[0] = numbers[0].replace("\"", "");
+                if (isNaN(parseInt(numbers[0], 10))) {
+                    csv_error_log += "Node " + node.Id + " does not start with a number \n";
+                }
+            }
+			var thresholdCarac = 1;
+            for (var c in carac2test) {
+				if(carac2test[c] == "<" || carac2test[c] == ">")
+					thresholdCarac = 2;
+				else 
+					thresholdCarac = 1;
+                if (multipleIndex(text.split(''), carac2test[c]).length > thresholdCarac) {
+                    csv_error_log += "Character " + carac2test[c] + " appears more than "+thresholdCarac+" times in " + node.Id + "\n";
+                }
+            }
+        }
+    }
+    if(!startNodeChecking)
+        csv_error_log += "No start node.... Please add: START: to the first node \n";
+    if(csv_error_log != ""){
+        console.log("ERROR IN CSV FILE")
+        document.getElementById('csvdata').innerText = csv_error_log;
+        return null;
+    }
+
+    console.log("VIGNETTE");
+    console.log(vignette);
+
+    chart_graph.edges = [];
+    chart_graph.nodes = [];
+    chart_graph.activity = [];
+    chart_graph.group = [];
+
+    for(var n in vignette.node)
+        newGraphNode(vignette.node[n]);
+    for(var l in vignette.line)
+        newGraphEdge(vignette.line[l]);
+
+    setSoundPlayingNode();
+    console.log("from CSV GRAPH");
+    console.log(chart_graph);
+
+    buildConnections(); //Feedback done here
+
+    loopHandling();
+
+    insertEndOfVignetteCallBehavior();
+
+    setStartNode();
+    setDecisionNode();
+
+
+    setMultipleRoleOperations();
+
+    //Parallelize Speak + something
+    setSpeakOperations();
+
+    //When more than one operations with no speak -> Sequence
+    setSequenceOfOperations();
+
+
+    divideActivities();
+
+    for(var a in activities) {
+        insertFinalNode(activities[a]);
+        insertInitialNode(activities[a]);
+        //Insert record after final and initial node
+        if(activities[a].name == "initialNode")
+            insertRecorder(activities[a]);
+
+    }
+
+    var counterN = 0;
+    var counterE = 0;
+    for(var a in activities) {
+        for(var b in activities[a].nodes){
+            if( activities[a].nodes[b].id == "")
+                console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " + activities[a].nodes[b].name );
+            counterN ++;
+        }
+        for(var c in activities[a].edges){
+            counterE ++;
+            if(activities[a].edges[c].source && activities[a].edges[c].target == "")
+                console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " );
+        }
+    }
+    console.log("COUNTERN : " + counterN);
+    console.log("COUNTERE : " + counterN);
+
+    buildActivity();
+
+    removeLoopInActivity();
+
+    for(var a in activities) {
+        callBehaviorName(activities[a]);
+    }
+}
+
+function removeLoopInActivity(){
+    for(var a in activities) {
+        for(var n in activities[a].nodes) {
+            if (activities[a].nodes[n].type == "uml:CallBehaviorAction") {
+                //If name of called activity == name of current activity
+                //Remove call behavior and put a direct link
+                var node = activities[a].nodes[n];
+                if(node.body.behavior == activities[a].name){
+
+
+                    //Remove outgoing edge
+                    var outgo = [];
+                    //Issue here: outgoing not specified.. should be
+                    for(var e in activities[a].edges){
+                        if(activities[a].edges[e].source == node.id) {
+                            outgo.push(activities[a].edges[e]);
+
+                        }
+                    }
+                    for(var e in outgo){
+                        activities[a].edges.splice(activities[a].edges.indexOf(outgo[e]),1);
+                    }
+
+                    //Remove decision node of list of nodes
+                    var inco = node.incoming[0];
+                    activities[a].nodes.splice(activities[a].nodes.indexOf(node),1);
+
+                    //switch transfer incoming of callBe to target of outgoing decision which is called DECISION
+                    var decisionNode = activities[a].nodes.find(function(element) {
+                        return element.name == "DECISION";
+                    });
+                    getEdgeInActivity(inco,activities[a]).target = decisionNode.id;
+                    decisionNode.incoming.push(inco);
+                }
+            }
+        }
+    }
+}
+
+//Make sure that no call behavior in activity have the same name
+function callBehaviorName(activity){
+    var names = [];
+    var counter =0;
+    for(var n in activity.nodes){
+        if(activity.nodes[n].type == "uml:CallBehaviorAction"){
+            if(names.includes(activity.nodes[n].name)){
+                activity.nodes[n].name += "_" + counter++;
+            }
+            names.push(activity.nodes[n].name);
+        }
+    }
+}
+
+
+function buildActivity() {
+    /*var ac = {};
+    ac.name = chart_graph.nodes[0].name;
+    ac.nodes = chart_graph.nodes;
+    ac.edges = chart_graph.edges;
+*/
+    console.log("ACTIVITIES");
+    console.log(activities);
+
+    for(var ac in activities)
+        chart_graph.activity.push(activities[ac]);
+
+
+/*
+
+    chart_graph.nodes = [];
+    chart_graph.edges = [];
+    */
+}
+
+//Feedback is here
+function buildConnections(){
+    var lines2RemoveIndex = [];
+    var choiceNodes = [];
+    for(var l in chart_graph.edges){
+        var line = chart_graph.edges[l];
+        var source = getNode(line.source);
+        if(source) {
+            if (source.type == "feedback") {
+
+                //take care of feedback here
+                var feedback = getFeedback(source.body.name);
+                var target = getNode(line.target);
+                if(target) {
+                    console.log("Assigning feedback");
+                    target.body.feedback = feedback;
+                    choiceNodes.push(target);
+                }
+
+                chart_graph.nodes.splice(chart_graph.nodes.indexOf(source),1);
+                lines2RemoveIndex.push(line);
+            }
+            else {
+                source.outgoing.push(line.id);
+                var target = getNode(line.target);
+                if (target)
+                    target.incoming.push(line.id);
+            }
+        }
+    }
+
+    console.log(choiceNodes);
+
+    for(var l in lines2RemoveIndex) {
+        chart_graph.edges.splice(chart_graph.nodes.indexOf(lines2RemoveIndex[l]), 1);
+    }
+}
+
+function getFeedback(feedbackText){
+    var feedback = {};
+
+    //Feedback empty if not specified
+    feedback.quantitative ="";
+    feedback.strategy = "";
+    feedback.qualitative = "";
+
+    //Example:
+    //(1) {} Great idea to provide a physical prompt which increases the likelihood that Michael will begin reading in the correct place, along with smiling back at him.
+
+    var display_index_start = feedbackText.indexOf('(');
+    var display_index_end = feedbackText.indexOf(')');
+    if (display_index_start != -1 && display_index_end != -1) {
+        feedback.quantitative = feedbackText.substring(display_index_start + 1, display_index_end);
+        feedbackText = feedbackText.substring(display_index_end, feedbackText.length);
+        //body.operation = "Speak";
+    }
+    var display_index_start = feedbackText.indexOf('{');
+    var display_index_end = feedbackText.indexOf('}');
+    if (display_index_start != -1 && display_index_end != -1) {
+        feedback.strategy = feedbackText.substring(display_index_start + 1, display_index_end);
+        feedbackText = feedbackText.substring(display_index_end, feedbackText.length);
+        //body.operation = "Speak";
+    }
+
+    var display_index_start = feedbackText.indexOf(' ');
+    feedback.qualitative = feedbackText.substring(display_index_start+1, feedbackText.length);
+    return feedback;
+}
+
+function extractBodyInfo(text){
+    var body = {};
+    body.operation = "";
+    //console.log("Extract body info  ");
+    //console.log(text);
+    if(text.includes("START"))
+        body.firstNode = true;
+
+    //name
+    //text = text.replace(/"/g, "");
+    if(text[0] == "\"")
+        text = text.slice(1);
+    if(text[text.length] == "\"")
+        text = text.slice(0,-1);
+
+    text = text.replace(/""/g, "\"");
+
+    var name_index = text.indexOf('.');
+    body.name = text.substring(0, name_index);
+
+    text = text.substring(name_index, text.length);
+
+    //Agent if not disruptive
+    var display_index_start = text.indexOf('{');
+    var display_index_end = text.indexOf('}');
+    if(display_index_start != -1 && display_index_end != -1) {
+        body.role = text.substring(display_index_start + 1, display_index_end);
+        text = text.substring(display_index_end, text.length);
+        //body.operation = "Speak";
+    }
+
+    //Display
+    var display_index_start = text.indexOf('[');
+    var display_index_end = text.indexOf(']');
+    if(display_index_start != -1 && display_index_end != -1) {
+        body.body = text.substring(display_index_start + 1, display_index_end);
+        text = text.substring(display_index_end, text.length);
+        body.operation = "Speak ";
+    }
+
+    //Operation
+    var ope_index_start = text.lastIndexOf('<');
+    var ope_index_end = text.indexOf('>');
+    if(ope_index_start != -1 && ope_index_end != -1) {
+        var o = text.substring(ope_index_start + 1, ope_index_end);
+        body.operation += o + " ";
+        if(isCommonBehavior(o)) {
+            body.operation += "WaitingForBehavior" + " ";
+        }
+    }
+
+/*
+    console.log("name " + body.name);
+    console.log("body " + body.body);
+    console.log("operation " + body.operation);
+*/
+if(text.startsWith("(")){
+    body.name = text;
+}
+
+    body.operation = body.operation.substring(0, body.operation.length - 1);
+    return body;
+}
+
+function newGraphNode(node){
+    if(node.Name == "Star" ||node.Name == "Text") {
+        //Just ignore
+    }else {
+        var role = "";
+        var text_body = node["Text Area 1"];
+        if (text_body) {
+            var body = extractBodyInfo(text_body);
+
+            var name = body.name;
+            var type = "type";
+            if (node.Name == "Process")
+                role = disruptiveStudent;
+            else if (node.Name == "Decision") {
+                role = teacher;
+                //name = "DECISION";
+                type = "uml:DecisionNode";
+            }
+            else if (node.Name == "Terminator") {
+                role = disruptiveStudent;
+                if (body.role) {
+                    if(body.role == "Teacher")
+                        role = teacher;
+                    else
+                        role = body.role;
+                }
+                name += "_end";
+            }
+            else if (node.Name == "Data (I/O)") {
+                if (body.role) {
+                    role = body.role;
+                }
+                else
+                    role = "Class";
+            }
+            else if (node.Name == "Preparation" || node.Name == "Hexagon")
+                role = teacher;
+            else if (node.Name == "Display") {
+                //Add this as a pin for choices
+
+                type = "feedback";
+                role = teacher;
+            }
+
+            name = name.replace(/ /g, '');
+            var newNode = {
+                "id": node.Id,
+                "name": name,
+                "type": type,
+                "body": body,
+                "role": role,
+                "incoming": [],
+                "outgoing": []
+            };
+
+            chart_graph.nodes.push(newNode);
+        }
+        else {
+                console.log("Node without body text");
+                console.log(node);
+        }
+    }
+}
+
+function newGraphEdge(edge){
+    if(edge["Line Connection Start"] != "" && edge["Line Connection End"] != "") {
+        var newEdge = {
+            "weight": {},
+            "id": edge.Id,
+            "type": "uml:ControlFlow",
+            "source": edge["Line Source"],
+            "name": "ControlFlow",
+            "target": edge["Line Destination"],
+            "index": edge.Id,
+            "guard": ""
+        };
+        chart_graph.edges.push(newEdge);
+    }
+}
+
+//Here we duplicate segments of the vignette that are accessed by different decision node
+//We want each decisionNodes going to these nodes to have a copy in their different activity
+//By copying the nodes we get rid of the loops
+function loopHandling(){
+    //Get nodes and egdes to duplicate
+    //Clone them
+    //Remove the corresponding input for each copy
+
+    console.log("loopHandling");
+    var loops = [];
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].incoming.length > 1 && chart_graph.nodes[n].type != "uml:DecisionNode")
+            loops.push(getNodesToDuplicate(chart_graph.nodes[n]));
+    }
+
+    //console.log(loops);
+    var loopEdges=[];
+    for(var l in loops)
+        loopEdges.push(getEdgesToDuplicate(loops[l]));
+    //console.log(loopEdges);
+
+    for(var n in loops){
+        var segments = [];
+        var c = {};
+        c.nodes = loops[n];
+        c.edges = loopEdges[n];
+        segments.push(c);
+        var inputEdges = [];
+        for(var e in loops[n][0].incoming){
+            if(e != 0)
+                segments.push(cloneSegment(loops[n],loopEdges[n]));
+            inputEdges.push(getEdge(loops[n][0].incoming[e]));
+        }
+        //console.log(segments);
+        //direct each incoming edge to one clone
+        for(var e in inputEdges){
+            inputEdges[e].target = segments[e].nodes[0].id;
+            segments[e].nodes[0].incoming = [inputEdges[e].id];
+        }
+    }
+}
+
+function getSegment2Duplicate(node){
+    var segment = {};
+    segment.inputEdges = [];
+    segment.nodes = [];
+    segment.edges = [];
+
+    console.log("SEGMENT 2 DUPLICATE");
+    console.log(node);
+
+    for(var i in node.incoming)
+        segment.inputEdges.push(getEdge(node.incoming[i]));
+
+    segment.nodes = getNodesToDuplicate(node);
+
+    console.log(segment);
+}
+
+function getNodesToDuplicate(node) {
+    var nodes2Duplicate = [];
+    var nodes= [];
+    nodes.push(node);
+    while(nodes.length > 0){
+        var currentNode = nodes.pop();
+        if(currentNode.type == "uml:DecisionNode" /*|| currentNode.name.includes("_end")*/)
+            nodes = [];
+        else{
+            nodes2Duplicate.push(currentNode);
+            nodes = nodes.concat(getNextNodes(currentNode));
+            if(nodes.includes(currentNode)){
+                console.log("AutoLoop or double edge around : " + currentNode.name);
+                console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            }
+        }
+    }
+    return nodes2Duplicate;
+}
+
+function getEdgesToDuplicate(nodes) {
+    var edge2Duplicate = [];
+    for(var i in nodes){
+        var outgoing_edge = getEdge(nodes[i].outgoing[0]);
+        if(outgoing_edge) {
+            for (var j in nodes) {
+                for (var e in nodes[j].incoming) {
+                    if (outgoing_edge.id == nodes[j].incoming[e])
+                        edge2Duplicate.push(outgoing_edge);
+                }
+            }
+        }
+    }
+    if(getEdge(nodes[nodes.length -1].outgoing[0]))
+        edge2Duplicate = edge2Duplicate.concat(getEdge(nodes[nodes.length -1].outgoing[0]));
+
+    return edge2Duplicate;
+}
+
+function cloneSegment(nodes,edges){
+    var c = {};
+    c.nodes = [];
+    c.edges = [];
+
+    var previous_edge;
+    for(var n in nodes){
+        var node_clone = cloneNode(nodes[n]);
+        c.nodes.push(node_clone);
+        if(previous_edge) {
+            node_clone.incoming = [previous_edge.id];
+            previous_edge.target = node_clone.id;
+        }
+        if(edges[n]) {
+            previous_edge = cloneEdge(edges[n]);
+            c.edges.push(previous_edge);
+            previous_edge.source = node_clone.id;
+            node_clone.outgoing = [previous_edge.id];
+        }
+    }
+    //if clone directs to a decision node, this decision node needs to know that it has another input
+    if(c.nodes.length == c.edges.length){
+        var decisionNode = getNode(getEdge(c.nodes[c.nodes.length-1].outgoing[0]).target);
+        if(decisionNode.type = "uml:DecisionNode") {
+            decisionNode.incoming.push(c.nodes[c.nodes.length - 1].outgoing[0]);
+        }
+    }
+    return c;
+}
+
+function cloneNode(node){
+    var body_clone = {
+        "name": node.body.name + "_clone",
+        "operation": node.body.operation,
+        "body": node.body.body,
+        "role": node.body.role,
+        "behavior": node.body.behavior
+    };
+    if(node.body.feedback) {
+        var feedback_clone = {
+            "quantitative": node.body.feedback.quantitative,
+            "qualitative": node.body.feedback.qualitative,
+            "strategy": node.body.feedback.strategy
+        };
+        body_clone.feedback = feedback_clone;
+    }
+
+    var clone = {
+        "id": generateId(),
+        "name": node.name + "_clone",
+        "type": node.type,
+        "body": body_clone,
+        "role": node.role,
+        "incoming": node.incoming.slice(0),
+        "outgoing": node.outgoing.slice(0)
+    };
+	while(getNode(clone.name)!= null)
+	{
+		clone.name = clone.name + "_clone";
+		body_clone.name = body_clone.name + "_clone";
+	}
+    if(node.soundId)
+        clone.soundId = node.soundId;
+    chart_graph.nodes.push(clone);
+    return clone;
+}
+
+function cloneEdge(edge){
+    var clone = {
+        "weight": edge.weight,
+        "id": generateId(),
+        "xmi_type":edge.xmi_type,
+        "source": edge.source,
+        "name": edge.name,
+        "target": edge.target,
+        "index": chart_graph.edges.length+1,
+        "guard": edge.guard
+    };
+    chart_graph.edges.push(clone);
+    return clone;
+}
+
+function setSpeakOperations(){
+    var toRemove = [];
+    var toAdd = [];
+    var counter = 0;
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].body && chart_graph.nodes[n].body.operation) {
+            if(chart_graph.nodes[n].body.operation.split(' ').length > 1 && chart_graph.nodes[n].body.operation.includes("Speak")){
+                toRemove.push(chart_graph.nodes[n]);
+                //console.log(counter++ + " id: "+chart_graph.nodes[n].id + " " + chart_graph.nodes[n].name);
+
+            }
+        }
+    }
+
+    //Remove node and add two new nodes
+    //console.log(chart_graph.nodes.length);
+    for(var n in toRemove) {
+        chart_graph.nodes.splice(chart_graph.nodes.indexOf(toRemove[n]), 1);
+        var parallelNodes = divideSpeakNode(toRemove[n]);
+        //console.log("new sequence");
+        //console.log(parallelNodes);
+        toAdd = toAdd.concat(parallelNodes)
+    }
+    //console.log(chart_graph.nodes.length);
+    console.log("parallel and Sequence of operations");
+    console.log(toAdd);
+    for (var pn in toAdd) {
+        chart_graph.nodes.push(toAdd[pn]);
+    }
+}
+
+function setSequenceOfOperations(){
+    var toRemove = [];
+    var toAdd = [];
+    var counter = 0;
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].body && chart_graph.nodes[n].body.operation) {
+            if(chart_graph.nodes[n].body.operation.split(' ').length > 1){
+                toRemove.push(chart_graph.nodes[n]);
+                //console.log(counter++ + " id: "+chart_graph.nodes[n].id + " " + chart_graph.nodes[n].name);
+
+            }
+        }
+    }
+
+    //Remove node and add two new nodes
+    //console.log(chart_graph.nodes.length);
+    for(var n in toRemove) {
+        chart_graph.nodes.splice(chart_graph.nodes.indexOf(toRemove[n]), 1);
+        var parallelNodes = divideNode(toRemove[n]);
+        //console.log("new sequence");
+        //console.log(parallelNodes);
+        toAdd = toAdd.concat(parallelNodes)
+    }
+    //console.log(chart_graph.nodes.length);
+    console.log("Sequence of operations");
+    console.log(toAdd);
+    for (var pn in toAdd) {
+        chart_graph.nodes.push(toAdd[pn]);
+    }
+}
+
+//Parallelizes speak and actions
+function divideSpeakNode(node){
+    //We check for parallelization of actions(Speak + other actions)
+    var newNodes = [];
+    var operations = node.body.operation.split(' ');
+    if (operations.length > 1 && operations.indexOf("Speak") != -1) {
+        var parallelNodes = [];
+        for (var o in operations) {
+            var op = operations[o];
+            if (op === "Speak") {
+                var body = {};
+                body.name = node.name + "_speak";
+                body.body = node.body.body;
+                body.operation = op;
+                var speakNode = {
+                    "id": node.id + "_speak",
+                    "name": node.name + "_speak",
+                    "type": node.type,
+                    "body": body,
+                    "role": node.role,
+                    "incoming": [node.incoming[0]],
+                    "outgoing": [node.outgoing[0]]
+                };
+                if(node.soundId)
+                    speakNode.soundId = node.soundId;
+                //console.log("speaknodes    " + speakNode.name);
+                parallelNodes.push(speakNode);
+            }
+        }
+        operations.splice(operations.indexOf("Speak"), 1);
+        node.body.operation = operations.join(" ");
+        parallelNodes.push(node);
+
+        //parallelize
+        createParallel(parallelNodes);
+        newNodes = newNodes.concat(parallelNodes);
+
+    }
+    return newNodes;
+}
+
+
+//Sequences actions which are no speak
+function divideNode(node){
+
+    //And finally the sequence of actions
+
+    //Newnodes are added after the loop in setSequenceOfOperations
+    var newNodes = [];
+
+    var operations = node.body.operation.split(' ');
+    //Sequence of operation
+    if (operations.length > 1) {
+        var sequenceNodes = [];
+        for (var o in operations) {
+            var op = operations[o];
+            var body = {};
+            body.name = node.name + "_" + o;
+            body.body = node.body.body;
+            body.operation = operations[o];
+            body.feedback = node.body.feedback;
+            var newNode = {
+                "id": node.id + "_" + o,
+                "name": node.name + "_" + o,
+                "type": node.type,
+                "body": body,
+                "role": node.role,
+                "incoming": [node.incoming[0]],
+                "outgoing": [node.outgoing[0]]
+            };
+            sequenceNodes.push(newNode);
+        }
+
+        //addForkJoin(newNodes);
+
+        createSequence(sequenceNodes);
+        newNodes = newNodes.concat(sequenceNodes);
+        //console.log(newNodes);
+
+    }
+    return newNodes;
+}
+
+function setMultipleRoleOperations(){
+    var toRemove = [];
+    var toAdd = [];
+    var counter = 0;
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].role) {
+            if(chart_graph.nodes[n].role.split(' ').length > 1){
+                toRemove.push(chart_graph.nodes[n]);
+                console.log("Multiple role : "+counter++ + " " + chart_graph.nodes[n].role);
+                console.log(chart_graph.nodes[n]);
+            }
+
+        }
+    }
+
+    //Remove nodes
+    console.log(chart_graph.nodes.length);
+    for(var n in toRemove){
+        chart_graph.nodes.splice(chart_graph.nodes.indexOf(toRemove[n]),1);
+
+        //Parallelize nodes with two or more roles
+        var actors = toRemove[n].role.split(' ');
+        var parallelNodes = [];
+        //Create list of node to parallelize
+        for(var a in actors){
+            var clonedNode = cloneNode(toRemove[n]);
+            clonedNode.name = clonedNode.name.replace("clone", actors[a]);
+            clonedNode.role = actors[a];
+            clonedNode.body.role = actors[a];
+            parallelNodes.push(clonedNode);
+
+
+
+        }
+        //parallelize
+        createParallel(parallelNodes);
+        console.log(parallelNodes);
+        toAdd = toAdd.concat(parallelNodes);
+
+    }
+    console.log(chart_graph.nodes.length);
+    console.log(chart_graph.nodes);
+
+    console.log("MULTIUPOLE ATCTOPRS");
+    console.log(toAdd);
+    console.log(chart_graph.nodes.length);
+    //Get newly created nodes and add them after the loop
+    for (var pn in toAdd) {
+        chart_graph.nodes.push(toAdd[pn]);
+    }
+}
+
+function createParallel(parallel_nodes){
+    //create fork and join
+    //redirect input and output edges to/from fork and join
+    //create connections inside fork
+    //
+    var incoming = getEdge(parallel_nodes[0].incoming[0]);
+    var outgoing = getEdge(parallel_nodes[0].outgoing[0]);
+    var role = parallel_nodes[0].role;
+
+    var forkId= generateId();
+    var joinId = generateId();
+
+    var emptyBody = {};
+    //Create fork + n new edges for connections
+    var newFork = {
+        "id": forkId,
+        "name": "Fork_" + forkId.substring(0,4),
+        "type": "uml:ForkNode",
+        "body": emptyBody,
+        "role": role,
+        "incoming": [incoming.id],
+        "outgoing": []
+    };
+    var listForkOutgoId = [];
+    for(var n in parallel_nodes){
+        var newEdgeId = generateId();
+        var newEdge = {
+            "weight": {},
+            "id": newEdgeId,
+            "xmi_type": "uml:ControlFlow",
+            "source": forkId,
+            "name": "ControlFlow",
+            "target": parallel_nodes[n].id,
+            "index": chart_graph.edges.length+1,
+            "guard": ""
+        };
+        parallel_nodes[n].incoming = [];
+        parallel_nodes[n].incoming[0] = newEdgeId;
+        listForkOutgoId.push(newEdgeId);
+        chart_graph.edges.push(newEdge);
+    }
+    incoming.target = forkId;
+    newFork.outgoing = listForkOutgoId;
+
+    //Create Join + n new edges for connections
+
+    var listJoinIncoId = [];
+    var counter = 0;
+    for(var n in parallel_nodes){
+        var newEdgeId = generateId();
+        var newEdge = {
+            "weight": {},
+            "id": newEdgeId,
+            "xmi_type": "uml:ControlFlow",
+            "source": parallel_nodes[n].id,
+            "name": "ControlFlow",
+            "target": joinId,
+            "index": chart_graph.edges.length+1,
+            "guard": ""
+        };
+        parallel_nodes[n].outgoing[0] = [];
+        parallel_nodes[n].outgoing[0] = newEdgeId;
+        listJoinIncoId.push(newEdgeId);
+        chart_graph.edges.push(newEdge);
+
+
+    }
+    var newJoin = {
+        "id": joinId,
+        "name": "Join_"+joinId.substring(0,4),
+        "type": "uml:JoinNode",
+        "body": emptyBody,
+        "role": role,
+        "incoming": listJoinIncoId,
+        "outgoing": []
+    };
+    //for end nodes which have no outgoing no need to do that
+    if(outgoing) {
+        newJoin.outgoing[0] = outgoing.id;
+        outgoing.source = joinId;
+    }
+
+
+    parallel_nodes.push(newFork);
+    parallel_nodes.push(newJoin);
+}
+
+function createSequence(nodes){
+    //console.log("Divided nodes:");
+    //console.log(nodes);
+
+    var incoming_edge = getEdge(nodes[0].incoming[0]);
+    var outgoing_edge = getEdge(nodes[0].outgoing[0]);
+    //console.log("Incoming edge "+ incoming_edge.id  +" from " + incoming_edge.source + " to " + incoming_edge.target);
+    //if(outgoing_edge != undefined)
+    //    console.log("Outgoing edge "+ outgoing_edge.id  +" from " + outgoing_edge.source + " to " + outgoing_edge.target);
+    //console.log(incoming_edge);
+    //console.log(outgoing_edge);
+
+    for(var n in nodes) {
+        if(nodes[n] == nodes[nodes.length - 1]){
+            //For last node change source of outgoing edge
+            if(outgoing_edge != undefined) {
+                outgoing_edge.source = nodes[n].id;
+                //console.log("last node in sequence, modifying outgoing edge..");
+                //console.log("Outgoing edge from " + outgoing_edge.source + " to " + outgoing_edge.target);
+            }
+            else{
+                //console.log("End node, no outgoing edge");
+            }
+        }else {
+            //create new edge and connect with next one in the sequence
+
+            var newEdgeId = generateId();
+            var newEdge = {
+                "weight": {},
+                "id": newEdgeId,
+                "xmi_type": "uml:ControlFlow",
+                "source": nodes[n].id,
+                "name": "ControlFlow",
+                "target": nodes[ parseInt(n) + 1].id,
+                "index": chart_graph.edges.length + 1,
+                "guard": ""
+            };
+
+            if (nodes[n] == nodes[0]) {
+                incoming_edge.target = nodes[n].id;
+                //console.log("first node in sequence, modifying incoming edge..");
+                //console.log("Incoming edge from " + incoming_edge.source + " to " + incoming_edge.target);
+            }
+
+            nodes[n].outgoing = [newEdgeId];
+            nodes[ parseInt(n) + 1].incoming = [newEdgeId];
+            chart_graph.edges.push(newEdge);
+
+            //console.log(nodes[n].id);
+            //console.log("NEW EDGE " + newEdgeId +"  from " + newEdge.source + "  to  " + newEdge.target);
+        }
+    }
+
+}
+
+function setStartNode(){
+    console.log("setStartNode");
+    var csvInitNode;
+
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].body.firstNode)
+            csvInitNode = chart_graph.nodes[n];
+    }
+
+    console.log("START NODE");
+    console.log(csvInitNode);
+    var initNode_id = generateId();
+    var initEdge = {
+        "weight": {},
+        "id": generateId(),
+        "xmi_type": "uml:ControlFlow",
+        "name": "ControlFlow",
+        "source" : initNode_id,
+        "target": csvInitNode.id,
+        "index": chart_graph.edges.length+1,
+        "guard": ""
+    };
+
+    var initNode = {
+        "id": initNode_id,
+        "name": "initialNode",
+        "type": "uml:InitialNode",
+        "body": "",
+        "role": csvInitNode.role,
+        "incoming": [],
+        "outgoing": [initEdge.id],
+        "argument": {}
+    };
+    csvInitNode.incoming = [initEdge.id];
+
+    chart_graph.nodes.push(initNode);
+    chart_graph.edges.push(initEdge);
+
+    //to create the root activity
+    decisionNodes.push(initNode);
+}
+
+function setDecisionNode(){
+    //Operation on decision node
+    //Inserting decision operation and choice operations
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].type === "uml:DecisionNode"){
+            insertDecisionOperation(chart_graph.nodes[n]);
+            var nodes = [];
+            for(var e in chart_graph.nodes[n].outgoing){
+                //console.log(chart_graph.nodes[n].outgoing);
+
+                getEdge(chart_graph.nodes[n].outgoing[e]).guard = "Teacher.decisionValue=" + parseInt(e);
+                nodes.push(getNode(getEdge(chart_graph.nodes[n].outgoing[e]).target));
+            }
+            //console.log(nodes);
+            insertChoiceOperations(nodes);
+        }
+    }
+
+}
+
+function setSoundPlayingNode(){
+    console.log("SOUND PLAY NODES");
+    for(var n in chart_graph.nodes) {
+        if(chart_graph.nodes[n].body.operation) {
+            if (chart_graph.nodes[n].body.operation.includes("Speak")) {
+                //console.log("Inserting audio sound : " + chart_graph.nodes[n].body.name);
+                chart_graph.nodes[n].soundId = chart_graph.nodes[n].body.name;
+            }
+            /*var opes = chart_graph.nodes[n].body.operation.split(' ');
+            console.log(opes);
+            for (var o in opes) {
+                if (sounds.includes(opes[o])) {
+                    //console.log("Operation is a sound : " + opes[o]);
+                    var os = chart_graph.nodes[n].body.operation.split(' ');
+                    os.splice(os.indexOf(opes[o]), 1);
+                    chart_graph.nodes[n].body.operation = os.join(' ');
+                    chart_graph.nodes[n].soundId = opes[o];
+                }
+            }
+            */
+        }
+    }
+}
+
+function insertDecisionOperation(node){
+    //console.log("Insert decision " + node.name);
+    //insert decision operation before decisionNode
+    //var incoming_edge = getEdge(node.incoming[0]);
+
+    var activityName = "Decision_" + node.name;
+
+    var decisionNode_id = generateId();
+    var newEdgeId = generateId();
+    var body = {};
+    body.name = "Decision_" + node.name;
+    body.operation = "Decision";
+
+    var decisionNode = {
+        "id": decisionNode_id,
+        "name": body.name,
+        "type": "type",
+        "body": body,
+        "role": node.role,
+        "incoming": node.incoming.slice(0),
+        "outgoing": [newEdgeId]
+    };
+    //It may have various input due to the loop removal
+    for(var e in node.incoming)
+        node.incoming[e].target = decisionNode_id;
+    node.incoming = [newEdgeId];
+
+    var newEdge = {
+        "weight": {},
+        "id": newEdgeId,
+        "xmi_type": "uml:ControlFlow",
+        "source": decisionNode_id,
+        "name": "ControlFlow",
+        "target": node.id,
+        "index": chart_graph.edges.length + 1,
+        "guard": ""
+    };
+
+    chart_graph.nodes.push(decisionNode);
+    decisionNodes.push(decisionNode);
+    chart_graph.edges.push(newEdge);
+
+    insertCallBehavior(decisionNode,activityName);
+}
+
+function insertCallBehavior(node, nextActivity){
+    //insert callBehavior before node to call nextActivity
+    var incomingID = [];
+    //Handle multiple inputs due to loop removals
+    for(var e in node.incoming) {
+        var incoming_edge = getEdge(node.incoming[e]);
+
+        var callBeNode_id = generateId();
+        var newEdgeId = generateId();
+        var type = "uml:CallBehaviorAction";
+        var body = {};
+        body.behavior = nextActivity;
+
+        var callBeNode = {
+            "id": callBeNode_id,
+            "name": nextActivity,
+            "type": type,
+            "body": body,
+            "role": node.role,
+            "incoming": [incoming_edge.id],
+            "outgoing": [newEdgeId]
+        };
+        incoming_edge.target = callBeNode_id;
+        incomingID.push(newEdgeId);
+
+        var newEdge = {
+            "weight": {},
+            "id": newEdgeId,
+            "xmi_type": "uml:ControlFlow",
+            "source": callBeNode_id,
+            "name": "ControlFlow",
+            "target": node.id,
+            "index": chart_graph.edges.length + 1,
+            "guard": ""
+        };
+
+        chart_graph.nodes.push(callBeNode);
+        chart_graph.edges.push(newEdge);
+    }
+    node.incoming = incomingID.slice(0);
+}
+
+//Choice nodes are attributed to Teacher role
+//Other teacher actions to TeacherAuto
+function insertChoiceOperations(nodes) {
+    //Insert choice node based on the different options a each decision node
+    for (var n in nodes) {
+        var node = nodes[n];
+        //console.log(node);
+
+        var incoming_edge = getEdge(node.incoming[0]);
+
+        var choiceNode_id = generateId();
+        var newEdgeId = generateId();
+        var body = {};
+        body.name = "choice_" + node.name;
+        body.operation = "Choice";
+        body.feedback = {};
+		
+		//in case of no feedback (1)
+        if(typeof node.body.feedback == typeof undefined)
+		{
+			node.body.feedback={};
+			node.body.feedback.qualitative="-1";
+			node.body.feedback.strategy="-1";
+			node.body.feedback.quantitative="-1";
+		}
+		body.feedback.qualitative = node.body.feedback.qualitative;
+		
+        body.feedback.strategy = node.body.feedback.strategy;
+        body.feedback.quantitative = node.body.feedback.quantitative;
+
+        var opes = node.body.operation.split(" ");
+        body.body = "";
+        /*if(opes.length >1){
+            opes.shift();
+            body.body = opes.join(" ");
+            body.body += " ";
+        }*/
+        body.body += node.body.body;
+        //console.log(body.name);
+        //console.log(body);
+        var choiceNode = {
+            "id": choiceNode_id,
+            "name": body.name,
+            "type": "type",
+            "body": body,
+            "role": "Teacher",
+            "incoming": node.incoming.slice(0),
+            "outgoing": [newEdgeId]
+        };
+        incoming_edge.target = choiceNode_id;
+
+
+        var newEdge = {
+            "weight": {},
+            "id": newEdgeId,
+            "xmi_type": "uml:ControlFlow",
+            "source": choiceNode_id,
+            "name": "ControlFlow",
+            "target": node.id,
+            "index": chart_graph.edges.length + 1,
+            "guard": ""
+        };
+        node.incoming = [newEdgeId];
+        //console.log("CHOICE NODE");
+        //console.log(choiceNode);
+        chart_graph.nodes.push(choiceNode);
+        chart_graph.edges.push(newEdge);
+    }
+}
+
+function divideActivities(){
+    //Create one activity per decision node
+    for(var n in decisionNodes){
+        var activity = {};
+        activity.name = decisionNodes[n].name;
+        activity.id = generateId();
+        decisionNodes[n].activity = activity.name;
+        acquireBranch(decisionNodes[n],activity.name);
+        if(decisionNodes[n].type != "uml:InitialNode")
+            decisionNodes[n].name = "DECISION";
+
+        activities.push(activity);
+    }
+
+    for(var a in activities) {
+        activities[a].nodes = [];
+        activities[a].edges = [];
+        for (var n in chart_graph.nodes) {
+
+            if (activities[a].name == chart_graph.nodes[n].activity) {
+                activities[a].nodes.push(chart_graph.nodes[n]);
+            }
+        }
+    }
+
+    for(var e in chart_graph.edges){
+        var edge = chart_graph.edges[e];
+        var source = getNode(edge.source);
+
+        var target = getNode(edge.target);
+
+        //console.log(edge);
+        //console.log("source");
+        //console.log(source);
+        //console.log("target");
+        //console.log(target);
+        if(source && target){
+            //if(source.activity && target.activity) {
+                if (source.activity == target.activity) {
+                    edge.activity = source.activity;
+                    //console.log(edge);
+                    getActivity(edge.activity).edges.push(edge);
+                }
+                else{
+                    //console.log("Check for duplicate edges around " + source.name);
+                }
+            //}
+        }
+    }
+}
+
+function checkActivity(node){
+    if(!node.activity){
+        var parent = getParent(node,0);
+        if(!parent.activity) {
+            console.log("PARENT HAS NO ACTIVITY!");
+            //checkActivity(parent);
+        }
+
+        if(parent.activity){
+            node.activity = parent.activity;
+            //
+        }
+    }
+}
+
+function getParent(node,index){
+    console.log(node);
+
+    var parent = getNode(getEdge(node.incoming[index]).source);
+    console.log(parent);
+    return parent;
+}
+
+function acquireBranch(node, activityName){
+    //console.log(node);
+    var nodes = [];
+    nodes = nodes.concat(getNextNodes(node));
+    while(nodes.length > 0){
+        var currentNode = nodes.pop();
+        //console.log("Acquire new node");
+        //console.log(currentNode);
+        if(!currentNode.activity){
+            //console.log("Add Node " + currentNode.name + " to activity " + activityName);
+            //console.log(currentNode.name + "   " + currentNode.id);
+            currentNode.activity = activityName;
+            if(currentNode.type == "uml:CallBehaviorAction"){
+                for(var e in currentNode.outgoing)
+                    removeEdge(getEdge(currentNode.outgoing[e]));
+            }
+            var nextNodes = getNextNodes(currentNode);
+            nodes = nodes.concat(nextNodes);
+            //console.log("NODES")
+            //console.log(nodes);
+        }
+    }
+}
+
+function insertInitialNode(activity) {
+    //Find first node (The decision one)
+    //Insert initial node + edge
+
+    var startNode = null;
+    for (var n in activity.nodes) {
+        if (activity.nodes[n].body.operation == "Decision") {
+            startNode = activity.nodes[n];
+        }
+    }
+
+    if (startNode != null) {
+        var initNode_id = generateId();
+        var initEdge = {
+            "weight": {},
+            "id": generateId(),
+            "xmi_type": "uml:ControlFlow",
+            "name": "ControlFlow",
+            "source" : initNode_id,
+            "target": startNode.id,
+            "index": chart_graph.edges.length+1,
+            "guard": ""
+        };
+
+        var initNode = {
+            "id": initNode_id,
+            "name": "Initial Node",
+            "type": "uml:InitialNode",
+            "body": "",
+            "role": startNode.role,
+            "incoming": [],
+            "outgoing": [initEdge.id],
+            "argument": {}
+        };
+        startNode.incoming = [initEdge.id];
+
+        activity.nodes.push(initNode);
+        activity.edges.push(initEdge);
+    }
+    else{
+        console.log("Start node not found for " + activity.name + " activity");
+    }
+}
+
+function insertFinalNode(activity){
+    //Insert join node and final node
+    //Any node which has no outgoing edge is plug into the join node
+    //To apply after activities has been divided
+
+    //console.log(activity.name);
+    //console.log(activity);
+    var finalEdges = [];
+    for(var n in activity.nodes){
+        if(activity.nodes[n].outgoing.length == 0 || (activity.nodes[n].outgoing.length == 1 && activity.nodes[n].outgoing[0] == undefined ) ){
+            //console.log("end node : " + activity.nodes[n].id);
+            var newEdge = {
+                "weight": {},
+                "id": generateId(),
+                "xmi_type": "uml:ControlFlow",
+                "source": activity.nodes[n].id,
+                "name": "ControlFlow",
+                "target": "",
+                "index": chart_graph.edges.length+1,
+                "guard": ""
+            };
+            finalEdges.push(newEdge);
+        }
+    }
+
+    if(finalEdges.length > 1) {
+        //console.log("insert final node to " + activity.name + " for " + finalEdges.length + " end nodes");
+        var finalEdge_id = generateId();
+        var joinNode = {
+            "id": generateId(),
+            "name": "Fork/Join",
+            "type": "uml:JoinNode",
+            "body": {},
+            "role": disruptiveStudent,
+            "incoming": [],
+            "outgoing": [finalEdge_id]
+        };
+
+        var finalNode_id = generateId();
+        var finalEdge = {
+            "weight": {},
+            "id": finalEdge_id,
+            "xmi_type": "uml:ControlFlow",
+            "source": joinNode.id,
+            "name": "ControlFlow",
+            "target": finalNode_id,
+            "index": chart_graph.edges.length+1,
+            "guard": ""
+        };
+
+
+        var finalNode = {
+            "id": finalNode_id,
+            "name": "Activity Final Node",
+            "type": "uml:ActivityFinalNode",
+            "body": {},
+            "role": disruptiveStudent,
+            "incoming": [finalEdge_id],
+            "outgoing": []
+        };
+        for(var e in finalEdges) {
+            joinNode.incoming.push(finalEdges[e].id);
+            finalEdges[e].target = [joinNode.id];
+
+        }
+        activity.nodes.push(joinNode);
+        activity.nodes.push(finalNode);
+        activity.edges.push(finalEdge);
+
+        activity.edges = activity.edges.concat(finalEdges);
+    }
+    else if(finalEdges.length == 1){
+        //only one node here
+        console.log("insert final node to " + activity.name + " for one end node");
+
+        var finalNode = {
+            "id": generateId(),
+            "name": "Activity Final Node",
+            "type": "uml:ActivityFinalNode",
+            "body": {},
+            "role": disruptiveStudent,
+            "incoming": [finalEdges[0].id],
+            "outgoing": []
+        };
+
+        activity.nodes.push(finalNode);
+        activity.edges.push(finalEdges[0]);
+    }
+
+
+
+
+}
+
+function removeEdge(edge){
+    var source = getNode(edge.source);
+    for(var e in source.outgoing){
+        if(source.outgoing[e] == edge.id){
+            source.outgoing.splice(source.outgoing.indexOf(edge.id), 1);
+        }
+    }
+
+    var target = getNode(edge.target);
+    for(var e in target.incoming){
+        if(target.incoming[e] == edge.id){
+            target.incoming.splice(target.incoming.indexOf(edge.id), 1);
+        }
+    }
+
+}
+
+function getNextNodes(node){
+    var nextNodes = [];
+    for(var e in node.outgoing){
+        var edge = getEdge(node.outgoing[e]);
+        if(edge){
+            var newNode = getNode(edge.target);
+            if(newNode)
+                nextNodes.push(newNode);
+        }
+
+    }
+    //console.log("GET NEXT NODES");
+    //console.log(nextNodes);
+    return nextNodes;
+}
+
+function getNode(idOrNameOrType) {
+    function byId(node) {
+        return node.id === idOrNameOrType;
+    }
+
+    function byName(node) {
+        return node.name === idOrNameOrType;
+    }
+
+    function byType(node) {
+        return node.type === idOrNameOrType;
+    }
+
+    if (chart_graph.nodes.find(byId))
+        return chart_graph.nodes.find(byId);
+    else if (chart_graph.nodes.find(byName))
+        return chart_graph.nodes.find(byName);
+    else if (chart_graph.nodes.find(byType))
+        return chart_graph.nodes.find(byType);
+    else {
+        console.log(idOrNameOrType+" Node not found !!");
+        return null;
+    }
+
+}
+function getNodeInActivity(idOrNameOrType,activity) {
+    function byId(node) {
+        return node.id === idOrNameOrType;
+    }
+
+    function byName(node) {
+        return node.name === idOrNameOrType;
+    }
+
+    function byType(node) {
+        return node.type === idOrNameOrType;
+    }
+
+    if (activity.nodes.find(byId))
+        return activity.nodes.find(byId);
+    else if (activity.nodes.find(byName))
+        return activity.nodes.find(byName);
+    else if (activity.nodes.find(byType))
+        return activity.nodes.find(byType);
+    else {
+        console.log(idOrNameOrType+" Node not found in " + activity.name);
+        return null;
+    }
+
+}
+function getEdge(id) {
+    function byId(edge) {
+        return edge.id === id;
+    }
+
+    if (chart_graph.edges.find(byId))
+        return chart_graph.edges.find(byId);
+    else {
+        console.log(id+ " Edge not found !!");
+        return null;
+    }
+
+}
+function getEdgeInActivity(id,activity) {
+    function byId(edge) {
+        return edge.id === id;
+    }
+
+    if (activity.edges.find(byId))
+        return activity.edges.find(byId);
+    else {
+        console.log(id+ " Edge not found in "+ activity.name);
+        return null;
+    }
+
+}
+
+function getActivity(name) {
+    function byName(ac) {
+        return ac.name === name;
+    }
+    function approx(ac){
+        if(name.includes(ac.name))
+            return ac.name;
+    }
+
+    if (activities.find(byName))
+        return activities.find(byName);
+    else if(activities.find(approx))
+        return activities.find(approx);
+    else {
+        console.log(name + " Activity not found !!");
+        return null;
+    }
+
+}
+
+//Add the start recording action with fork and join for the whole activity.
+//Only to insert in the initial activity to launch recording for the simulation
+function insertRecorder(activity) {
+    //get Activity initial node and final node.
+    //get first node
+    //Create record node
+    //Insert fork and redirect edges to fork
+    //Create new edges to/for fork (first node)
+    //Edge from Record to activityfinal node
+    console.log(activity);
+    var initialNode = getNodeInActivity("uml:InitialNode", activity);
+    //var finalNode = getNodeInActivity("uml:ActivityFinalNode", activity);
+    var firstNode = getNodeInActivity(getEdgeInActivity(initialNode.outgoing[0],activity).target,activity);
+
+    console.log("first node");
+    console.log(firstNode);
+
+    var recorder_role = "Recorder";
+    //creating node for RecordBehavior (Make sure recordBehavior exists in XMI)
+    var recordNode = {
+        "id": generateId(),
+        "name": "RecordBehavior",
+        "type": "uml:CallBehaviorAction",
+        "body": {behavior: "RecordBehavior"},
+        "role": recorder_role,
+        "incoming": [],
+        "outgoing": []
+    };
+    activity.nodes.push(recordNode);
+
+    //Redirect initialNode Edge to record behavior
+    getEdgeInActivity(initialNode.outgoing[0],activity).target = recordNode.id;
+    recordNode.incoming[0] = getEdgeInActivity(initialNode.outgoing[0],activity).id;
+
+    //Create new edge to go from recordBehavior to first node
+    var newEdgeId = generateId();
+    var newEdge = {
+        "weight": {},
+        "id": newEdgeId,
+        "xmi_type": "uml:ControlFlow",
+        "source": recordNode.id,
+        "name": "ControlFlow",
+        "target": firstNode.id,
+        "index": chart_graph.edges.length + 1,
+        "guard": ""
+    };
+    recordNode.outgoing.push(newEdgeId);
+    firstNode.incoming[0] = newEdgeId;
+    activity.edges.push(newEdge);
+}
+
+//Change name here to call the endofvignette behavior
+//Also Add ReceiveFeedback operation
+function insertEndOfVignetteCallBehavior(){
+    console.log("insertEndOfVignetteCallBehavior");
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].outgoing.length == 0){
+
+            //Insert receive feedbacknode
+            var edgeRFId = generateId();
+            //console.log(chart_graph.nodes[n]);
+            var bodyRF = {};
+            bodyRF.operation = "ReceiveFeedback";
+            bodyRF.feedback = {};
+			
+			//in case of no feedback (2)
+			if(typeof chart_graph.nodes[n].body.feedback == typeof undefined)
+			{
+				chart_graph.nodes[n].body.feedback = {};
+				chart_graph.nodes[n].body.feedback.qualitative="-1";
+				chart_graph.nodes[n].body.feedback.quantitative="-1";
+				chart_graph.nodes[n].body.feedback.strategy="-1";
+			}
+            bodyRF.feedback.qualitative = chart_graph.nodes[n].body.feedback.qualitative;
+            bodyRF.feedback.quantitative = chart_graph.nodes[n].body.feedback.quantitative;
+            bodyRF.feedback.strategy = chart_graph.nodes[n].body.feedback.strategy;
+            var receiveFeedbackNode= {
+                "id": generateId(),
+                "name": "ReceiveFeedback_"+chart_graph.nodes[n].name,
+                "type": "type",
+                "body": bodyRF,
+                "role": chart_graph.nodes[n].role,
+                "incoming": [edgeRFId],
+                "outgoing": []
+            };
+
+
+            var edgeRF = {
+                "weight": {},
+                "id": edgeRFId,
+                "xmi_type": "uml:ControlFlow",
+                "source": chart_graph.nodes[n].id,
+                "name": "ControlFlow",
+                "target": receiveFeedbackNode.id,
+                "index": chart_graph.edges.length + 1,
+                "guard": ""
+            };
+            chart_graph.nodes[n].outgoing = [edgeRFId];
+
+
+            var callBeNode_id = generateId();
+            var RF2FN_id = generateId();
+            var type = "uml:CallBehaviorAction";
+            var body = {};
+            body.behavior = "FinalNode";
+
+            var callBeNode = {
+                "id": callBeNode_id,
+                "name": "FinalNode",
+                "type": type,
+                "body": body,
+                "role": receiveFeedbackNode.role,
+                "incoming": [RF2FN_id],
+                "outgoing": []
+            };
+
+            var edgeRF2FN = {
+                "weight": {},
+                "id": RF2FN_id,
+                "xmi_type": "uml:ControlFlow",
+                "source": receiveFeedbackNode.id,
+                "name": "ControlFlow",
+                "target": callBeNode_id,
+                "index": chart_graph.edges.length + 1,
+                "guard": ""
+            };
+            receiveFeedbackNode.outgoing = [RF2FN_id];
+
+            chart_graph.nodes.push(receiveFeedbackNode);
+            chart_graph.edges.push(edgeRF);
+            chart_graph.nodes.push(callBeNode);
+            chart_graph.edges.push(edgeRF2FN);
+
+        }
+    }
+}
+
+function addForkJoin(nodes){
+    var incoming = nodes[0].incoming[0];
+    var outgoing = nodes[0].outgoing[0];
+    var role = nodes[0].role;
+
+    var forkId= generateId();
+    var joinId = generateId();
+    var emptyBody = {};
+    //Create fork + n new edges for connections
+    var newFork = {
+        "id": forkId,
+        "name": "Fork/Join",
+        "type": "uml:ForkNode",
+        "body": emptyBody,
+        "role": role,
+        "incoming": [incoming],
+        "outgoing": []
+    };
+    var listId = [];
+    for(var n in nodes){
+        var newEdgeId = generateId();
+        var newEdge = {
+            "weight": {},
+            "id": newEdgeId,
+            "xmi_type": "uml:ControlFlow",
+            "source": forkId,
+            "name": "ControlFlow",
+            "target": nodes[n].id,
+            "index": chart_graph.edges.length+1,
+            "guard": ""
+        };
+        nodes[n].incoming[0] = newEdgeId;
+        listId.push(newEdgeId);
+        chart_graph.edges.push(newEdge);
+    }
+    newFork.outgoing = listId;
+
+    //Create Join + n new edges for connections
+    var newJoin = {
+        "id": joinId,
+        "name": "Fork/Join",
+        "type": "uml:JoinNode",
+        "body": emptyBody,
+        "role": role,
+        "incoming": listId,
+        "outgoing": [outgoing]
+    };
+    for(var n in nodes){
+        var newEdgeId = generateId();
+        var newEdge = {
+            "weight": {},
+            "id": newEdgeId,
+            "xmi_type": "uml:ControlFlow",
+            "source": nodes[n].id,
+            "name": "ControlFlow",
+            "target": joinId,
+            "index": chart_graph.edges.length+1,
+            "guard": ""
+        };
+        nodes[n].outgoing = newEdgeId;
+        chart_graph.edges.push(newEdge);
+    }
+
+    nodes.push(newFork);
+    nodes.push(newJoin);
+}
+
+/*function setParallelOperations(){
+    var toRemove = [];
+    var counter = 0;
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].body && chart_graph.nodes[n].body.operation) {
+            if(chart_graph.nodes[n].body.operation.split(' ').length > 1){
+                toRemove.push(chart_graph.nodes[n]);
+                console.log("Multiple operation : " + counter++ + " " + chart_graph.nodes[n].body.operation);
+                divideNode(chart_graph.nodes[n]);
+            }
+        }
+    }
+
+    //Remove node and add two new nodes
+    console.log(chart_graph.nodes.length);
+    for(var n in toRemove)
+        chart_graph.nodes.splice(chart_graph.nodes.indexOf(toRemove[n]),1);
+    console.log(chart_graph.nodes.length);
+}*/
+
+function createPin(body,operation){
+    if(body.body) {
+        var argument = {};
+        argument.xmi_type = "uml:ValuePin";
+        argument.xmi_id = generateId();
+
+        //Depending on operation !!!
+        argument.name = "Message";
+        argument.ownedComment = {};
+        argument.ownedComment.xmi_id = generateId();
+        argument.ownedComment.body = body.body;
+        argument.upperBound = {};
+        argument.upperBound.xmi_id = generateId();
+        return argument;
+    }
+    else
+        return {};
+}
+
+//Not used
+//Feedback are display boxes that point to choice operation
+function integrateFeedback(){
+    console.log("FEEDBACK");
+    console.log(chart_graph);
+
+    var index2RemoveNode = [];
+    var edge2Remove = [];
+
+    for(var n in chart_graph.nodes){
+        if(chart_graph.nodes[n].type == "feedback") {
+            var edge = getEdge(chart_graph.nodes[n].outgoing[0]);
+            if(edge) {
+                var feedbackText = chart_graph.nodes[n].body.name;
+                var quantitative, qualitative, strategy;
+
+
+                var display_index_start = feedbackText.indexOf('(');
+                var display_index_end = feedbackText.indexOf(')');
+                if (display_index_start != -1 && display_index_end != -1) {
+                    quantitative = feedbackText.substring(display_index_start + 1, display_index_end);
+                    feedbackText = feedbackText.substring(display_index_end, feedbackText.length);
+                    //body.operation = "Speak";
+                }
+                var display_index_start = feedbackText.indexOf('{');
+                var display_index_end = feedbackText.indexOf('}');
+                if (display_index_start != -1 && display_index_end != -1) {
+                    strategy = feedbackText.substring(display_index_start + 1, display_index_end);
+                    feedbackText = feedbackText.substring(display_index_end, feedbackText.length);
+                    //body.operation = "Speak";
+                }
+
+                qualitative = feedbackText;
+
+
+                getNode(edge.target).body.feedback.quantitative = quantitative;
+                getNode(edge.target).body.feedback.qualitative = qualitative;
+                getNode(edge.target).body.feedback.strategy = strategy;
+
+                console.log(getNode(edge.target));
+                index2RemoveNode.push(n);
+                edge2Remove.push(edge);
+            }else{
+                console.log("No edge found ");
+                console.log(chart_graph.nodes[n]);
+            }
+        }
+    }
+
+    console.log("Node to remoive: " + index2RemoveNode.length);
+
+    for(var i in index2RemoveNode)
+        chart_graph.nodes.splice(index2RemoveNode[i],1);
+    for(var j in edge2Remove)
+        chart_graph.edges.splice(chart_graph.edges.indexOf(edge2Remove[j]),1);
+}
+
+
+
+

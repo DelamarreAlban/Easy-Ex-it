@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Area name="EasyExit">
+<Model url="MOD/MOD_Android1" xmi2="true"/>
+
+  <Entity name="Light" class="Light">
+    <Shape url="Light"/>
+  </Entity>
+
+  <Human name="Android1" class="Android_Agent" area="EasyExit">
+    <Shape url = "Android1" />
+    <Behavior name ="SimpleCommunicationBehavior" start = "true" interval="0.2"/>
+    <Behavior name ="ProceduralBehavior" start = "true" interval="0.2"/>
+  </Human>
+
+  <Human name="Android2" class="Android_Agent" area="EasyExit">
+    <Shape url = "Android2" />
+    <Behavior name ="SimpleCommunicationBehavior" start = "true" interval="0.2"/>
+    <Behavior name ="ProceduralBehavior" start = "true" interval="0.2"/>
+  </Human>
+
+  <Human name="Player" class="Player_Agent" area="EasyExit" controlled="yes">
+  	<Shape url = "Player" />
+  	<Behavior name ="SimpleCommunicationBehavior" start = "true" interval="0.2"/>        
+  	<Behavior name ="ProceduralBehavior" start = "true" interval="0.2"/>
+  </Human>
+
+  <Human name="PlayerAuto" class="Player_Agent" area="EasyExit">
+    <Shape url = "Player" />
+    <Behavior name ="SimpleCommunicationBehavior" start = "true" interval="0.2"/>
+    <Behavior name ="ProceduralBehavior" start = "true" interval="0.2"/>
+  </Human>
+
+<Organisation name ="org">
+  <Structure>Team</Structure>
+  <Affect type = "Role">
+    <Role>Android1</Role>
+    <AID>
+      <Name>Android1</Name>
+      <Plateform>localhost</Plateform>
+      <Port>8080</Port>
+    </AID>
+  </Affect>
+    <Affect type = "Role">
+      <Role>Android2</Role>
+      <AID>
+        <Name>Android2</Name>
+        <Plateform>localhost</Plateform>
+        <Port>8080</Port>
+      </AID>
+    </Affect>
+    <Affect type = "Role">
+      	<Role>Player</Role>
+        <AID>
+            	<Name>Player</Name>
+            	<Plateform>localhost</Plateform>
+            	<Port>8080</Port>
+        </AID>
+    </Affect>
+  <Affect type = "Role">
+    <Role>PlayerAuto</Role>
+    <AID>
+      <Name>PlayerAuto</Name>
+      <Plateform>localhost</Plateform>
+      <Port>8080</Port>
+    </AID>
+  </Affect>
+  <Affect type = "Ressource">
+    <Ressource>pencil</Ressource>
+    <Entity>Pencil</Entity>
+  </Affect>
+  </Organisation>
+</Area>
