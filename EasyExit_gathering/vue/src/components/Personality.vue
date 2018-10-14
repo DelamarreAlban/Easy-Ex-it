@@ -24,7 +24,7 @@
         </b-col>
 
       <b-row>
-       <b-button block variant="primary" @click="setUserPersonality()"> Next! </b-button>
+       <b-button block variant="primary" v-bind:disabled="isComplete" @click="setUserPersonality()"> Next! </b-button>
       </b-row>
     </b-container>
   </div>
@@ -51,9 +51,10 @@ export default {
   },
   methods: {
     setUserPersonality(){
-      console.log(this.answers)
-      this.$store.dispatch('newUserPersonality', this.answers)
-
+      //console.log(this.answers)
+      this.$store.dispatch('submitAnswers', this.answers)
+      let route = { name: 'Relationship'}
+      this.$router.push(route)
     },
     initialize() {
       let newAnswers = []
@@ -75,14 +76,15 @@ export default {
   },
   computed: {
     ...mapGetters(['user','questions']),
-    answerValue: {
-        get(){
-            return this.value;
-        },
-        set(newVal){
-            this.value = newVal;
-        }
-      },
+      isComplete () {
+        let r = false
+        this.answers.forEach((answer) => {
+          if(answer.answer == ""){
+            r = true
+          }
+        })
+        return r
+      }
   },
     beforeRouteEnter(to, from, next) {
       console.log("\nENTERING-> " + "Personality")

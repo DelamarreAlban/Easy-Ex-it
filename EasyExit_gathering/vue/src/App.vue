@@ -1,10 +1,6 @@
 <template>
   <div id="app">
     <div v-if="user">
-      <!--<b-modal v-model="showFeedback" hide-footer size="lg" id="modal1" title="Ratings">
-        <Feedback/>
-      </b-modal>-->
-      <!--<Navbar/>-->
       <router-view ref="router" class="customViews" />
     </div>
     <div v-else>
@@ -14,9 +10,9 @@
 </template>
 
 <script>
-import Navbar from '@/components/Navbar'
+
 import Login from '@/components/Login'
-import Feedback from '@/components/Feedback'
+
 
 import { mapGetters } from 'vuex'
 
@@ -38,7 +34,7 @@ export default {
   created() {
     this.$store.dispatch('load')
   },
-  components: { Navbar, Login, Feedback }
+  components: { Login }
 }
 </script>
 

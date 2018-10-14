@@ -2,26 +2,12 @@ import Vue from 'vue'
 import Router from 'vue-router'
 import store from './store'
 
-import Home from '@/components/Home'
+import Gender from '@/components/Gender'
+import ECAGender from '@/components/ECAGender'
 import Personality from '@/components/Personality'
-// import Reflection from '@/components/Reflection'
-import Profile from '@/components/Profile'
-import Contact from '@/components/Contact'
-import Feedback from '@/components/Feedback'
-import PracticeHistory from '@/components/PracticeHistory'
-import CharacterHistory from '@/components/CharacterHistory'
-import LearnSchool from '@/components/LearnSchool'
-import GameRules from '@/components/GameRules'
-import MeetStudents from '@/components/MeetStudents'
-import MeetColleagues from '@/components/MeetColleagues'
-import ConfidenceRatings from '@/components/ConfidenceRatings'
-import FinalReflections from '@/components/FinalReflections'
-import TourClassroom from '@/components/TourClassroom'
-import FAQ from '@/components/FAQ'
-import Reflection from '@/components/Reflection'
-import Admin from '@/components/Admin'
-import OnlineCourse from '@/components/OnlineCourse'
-import UserAnalytics from '@/components/UserAnalytics'
+import Relationship from '@/components/Relationship'
+import Scenarios from '@/components/Scenarios'
+import UnityApp from '@/components/UnityApp'
 
 Vue.use(Router)
 
@@ -29,8 +15,8 @@ let router = new Router({
   routes: [
     {
       path: '/',
-      name: 'Home',
-      component: Home
+      name: 'Gender',
+      component: Gender
     },
     {
       path: '/Personality',
@@ -38,88 +24,28 @@ let router = new Router({
       component: Personality
     },
     {
-      path:'/OnlineCourse',
-      name: 'OnlineCourse',
-      component: OnlineCourse
+      path: '/Relationship',
+      name: 'Relationship',
+      component: Relationship
     },
     {
-      path: '/profile',
-      name: 'Profile',
-      component: Profile
+      path: '/ECAGender',
+      name: 'ECAGender',
+      component: ECAGender
     },
     {
-      path: '/contact',
-      name: 'Contact',
-      component: Contact
+      path: '/Scenarios',
+      name: 'Scenarios',
+      component: Scenarios
     },
     {
-      path: '/logs/practice/:studentName?/:sessionId?',
-      name: 'PracticeHistory',
-      component: PracticeHistory
-    },
-    {
-      path: '/logs/confidence',
-      name: 'ConfidenceRatings',
-      component: ConfidenceRatings
-    },
-    {
-      path: '/logs/reflections',
-      name: 'FinalReflections',
-      component: FinalReflections
-    },
-    {
-      path: '/learn/school',
-      name: 'LearnSchool',
-      component: LearnSchool
-    },
-    {
-      path: '/learn/rules/:ruleIndex',
-      name: 'GameRules',
-      component: GameRules
-    },
-    {
-      path: '/learn/students/:studentName?',
-      name: 'MeetStudents',
-      component: MeetStudents
-    },
-    {
-      path: '/logs/characters/:studentName?',
-      name: 'CharacterHistory',
-      component: CharacterHistory
-    },
-    {
-      path: '/learn/colleagues/:colleagueName?',
-      name: 'MeetColleagues',
-      component: MeetColleagues
-    },
-    {
-      path: '/tour',
-      name: 'TourClassroom',
-      component: TourClassroom
-    },
-    {
-      path: '/faq',
-      name: 'FAQ',
-      component: FAQ
-    },
-    {
-      path: '/session/:sessionId',
-      name: 'Reflection',
-      component: Reflection
-    },
-    {
-      path: '/admin',
-      name: 'Admin',
-      component: Admin
-    },
-    {
-      path: '/admin/analytics/:userId',
-      name: 'UserAnalytics',
-      component: UserAnalytics
+      path: '/UnityApp',
+      name: 'UnityApp',
+      component: UnityApp
     },
     {
       path: '*',
-      component: Home
+      component: Gender
     }
   ]
 })

@@ -7,6 +7,7 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import Alert from './Alert'
 import Parse from 'parse'
 
@@ -30,56 +31,41 @@ export default {
   },
   methods: {
     startSession(){
-      console.log("start sessions")
-      let form = {}
-      //Need to generate random access different from existing one
-      form.email = "aaaa@a.com"
-      form.password = "a"
-      this.$store.dispatch('register', form)
-        .then((user) => {
-          this.currentMode = this.Modes.LOGIN
-          this.$store.commit('setAlert', { message: 'Please confirm your email', variant: 'success' })
+        this.$store.dispatch('getUserCount')
+          .then((userCount) => {
+            let form = {}
+            //Need to generate random access different from existing one
+            form.email = userCount.toString()+"@a.com"
+            form.password = "a"
+            this.$store.dispatch('register', form)
+              .then((user) => {
+                this.currentMode = this.Modes.LOGIN
+                this.$store.commit('setAlert', { message: 'Please confirm your email', variant: 'success' })
 
-          this.$store.dispatch('login', form)
-            .then((user) => {
-              this.$store.dispatch('load')
-              this.$router.push({ name: 'Home' })
-            })
-            .catch((err) => this.$store.commit('setAlert', { message: err.message, variant: 'danger' }))
+                this.$store.dispatch('login', form)
+                  .then((user) => {
+                    this.$store.dispatch('load')
+                    this.$router.push({ name: 'Gender' })
+                  })
+                  .catch((err) => this.$store.commit('setAlert', { message: err.message, variant: 'danger' }))
 
-        })
-        .catch((err) => this.$store.commit('setAlert', { message: err.message, variant: 'danger' }))
+              })
+              .catch((err) => this.$store.commit('setAlert', { message: err.message, variant: 'danger' }))
+
+          })
+
     },
     login(evt) {
       evt.preventDefault()
       this.$store.dispatch('login', this.form)
         .then((user) => {
           this.$store.dispatch('load')
-          this.$router.push({ name: 'Home' })
+          this.$router.push({ name: 'Gender' })
         })
         .catch((err) => this.$store.commit('setAlert', { message: err.message, variant: 'danger' }))
     },
-    register(evt) {
-      evt.preventDefault()
-      this.$store.dispatch('register', this.form)
-        .then((user) => {
-          this.currentMode = this.Modes.LOGIN
-          this.$store.commit('setAlert', { message: 'Please confirm your email', variant: 'success' })
-        })
-        .catch((err) => this.$store.commit('setAlert', { message: err.message, variant: 'danger' }))
-    },
-    forgot(evt) {
-      evt.preventDefault()
-      Parse.User.requestPasswordReset(this.form.email, {
-        success: () => {
-          this.currentMode = this.Modes.LOGIN
-          this.$store.commit('setAlert', { message: 'Password reset email was sent', variant: 'success' })
-        },
-        error: (err) => this.$store.commit('setAlert', { message: err.message, variant: 'danger' })
-      });
-    }
   },
-  components: { Alert }
+  components: { Alert },
 }
 </script>
 

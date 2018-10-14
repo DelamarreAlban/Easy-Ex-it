@@ -12,6 +12,8 @@ public class UnityMascaretApplication : MonoBehaviour
 {
     public bool loadAll = true;
 
+    public bool webgl = false;
+
     public string agent;
     public string procedure;
     [HideInInspector]
