@@ -24,7 +24,7 @@ export default {
     return {
       currentSimulation: {},
       games: {
-        'test': {
+        'webGL_test': {
           src: '../../static/games/WebGL_TEST/index.html'
         }
       }
@@ -59,9 +59,8 @@ export default {
       let key = findKey(this.simulations, { _id: simulationId })
       if(key){
         this.currentSimulation = this.simulations[key]
-
         //Load unity game
-        this.unityLoadGame('test')
+        this.unityLoadGame(this.currentSimulation.scenario.get('name'))
       }
 
     },
@@ -85,6 +84,9 @@ export default {
           let frame = {}
           frame.simulation = this.currentSimulation
           frame.output_strategy = data.content.output_strategy
+          frame.output_emotion = data.content.output_emotion
+          frame.input_strategy = data.content.input_strategy
+          frame.input_emotion = data.content.input_emotion
 
           this.$store.dispatch('submitChoiceFrame', frame)
           break

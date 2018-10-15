@@ -146,6 +146,9 @@ export default new Vuex.Store({
         newFrames[i] = {
           simulation: frame.get('simulation'),
           output_strategy: frame.get('output_strategy'),
+          output_emotion: frame.get('output_emotion'),
+          input_strategy: frame.get('input_strategy'),
+          input_emotion: frame.get('input_emotion'),
           _id: frame.id,
           _choiceFrame: frame
         }
@@ -331,6 +334,9 @@ export default new Vuex.Store({
       let ChoiceFrame = Parse.Object.extend('ChoiceFrame')
       let choiceFrame = new ChoiceFrame().set('simulation',frame.simulation._simulation)
         .set('output_strategy',frame.output_strategy)
+        .set('output_emotion',frame.output_emotion)
+        .set('input_strategy',frame.input_strategy)
+        .set('input_emotion',frame.input_emotion)
 
         choiceFrame.save(null, {
         success: (sim) => { console.log('choice frame saved ' + sim) },
