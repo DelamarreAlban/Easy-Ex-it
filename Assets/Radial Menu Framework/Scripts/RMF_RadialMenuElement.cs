@@ -32,6 +32,7 @@ public class RMF_RadialMenuElement : MonoBehaviour {
     public int assignedIndex = 0;
     // Use this for initialization
 
+    public float AlphaThreshold = 0.1f;
     private CanvasGroup cg;
 
     void Awake() {

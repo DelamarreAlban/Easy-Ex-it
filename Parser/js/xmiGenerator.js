@@ -419,6 +419,29 @@ function generateNodeArgument(node){
                 argument += "\n <upperBound xmi:type=\"uml:LiteralString\" xmi:id=\"" + generateId();
                 argument += "\" name=\"UpperBound\"" + " value=\"1\"/>";
                 argument += "\n </argument>\n";
+
+                var argument2 = "\n<argument";
+                argument2 += " xmi:type=\"uml:ValuePin\"";
+                argument2 += " xmi:id=\"" + generateId() + "\"";
+                // Pin name
+                argument2 += " name=\"" + "Specification" + "\">";
+                //
+
+                if(!node.body.feedback){
+                    node.body.feedback = {}
+                    node.body.feedback.quantitative = ""
+                    node.body.feedback.qualitative = ""
+                    node.body.feedback.strategy = ""
+                }
+
+                argument2 += "\n <ownedComment xmi:id=\"" + generateId() + "\">";
+                argument2 += "\n <body>" + htmlSpecialChars(node.body.feedback.quantitative) + "_" + htmlSpecialChars(node.body.feedback.strategy) + "_" + htmlSpecialChars(node.body.feedback.qualitative) + "</body>";
+                argument2 += "\n </ownedComment>";
+                argument2 += "\n <type xmi:type=\"uml:PrimitiveType\" href=\"pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String\"/>";
+                argument2 += "\n <upperBound xmi:type=\"uml:LiteralString\" xmi:id=\"" + generateId();
+                argument2 += "\" name=\"UpperBound\"" + " value=\"1\"/>";
+                argument2 += "\n </argument>\n";
+                argument += argument2;
             }
             else if (operation == "Choice") {
                 var argument1 = "\n<argument";

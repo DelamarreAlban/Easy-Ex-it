@@ -254,6 +254,7 @@
     <Compile Include="Assets\Script\Behavior\VirtualHuman_Agent_SetFacialExpression.cs" />
     <Compile Include="Assets\Script\Behavior\VirtualHuman_Agent_Speak.cs" />
     <Compile Include="Assets\Script\UI\EE_UI.cs" />
+    <Compile Include="Assets\Script\UI\RaycastMask.cs" />
     <Compile Include="Assets\Script\Utils\MascaretHumanActions.cs" />
     <Compile Include="Assets\Script\Utils\MascaretUtils.cs" />
     <Compile Include="Assets\Script\Utils\PrintSingleton.cs" />

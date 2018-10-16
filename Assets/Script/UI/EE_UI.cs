@@ -15,6 +15,12 @@ public class EE_UI : MonoBehaviour {
 
     public Dictionary<GameObject, GameObject> actives = new Dictionary<GameObject, GameObject>();
 
+    string currentUserEmotion = "insertEmotion";
+    string currentECAEmotion;
+    string currentECAStrategy;
+
+    UnityEngine.UI.Button emotionSelected;
+
     #region UI_Elements
 
     public Image androidPanel;
@@ -24,6 +30,8 @@ public class EE_UI : MonoBehaviour {
     Text playerText;
 
     public Image decisionPanel;
+    public Image emotionPanel;
+    public UnityEngine.UI.Button warningPanel;
 
     public GameObject radialMenu2Prefab;
     public GameObject radialMenu3Prefab;
@@ -33,6 +41,15 @@ public class EE_UI : MonoBehaviour {
     GameObject currentRadialMenu;
 
     public Image finalPanel;
+
+    public UnityEngine.UI.Button AngerButton;
+    public UnityEngine.UI.Button JoyButton;
+    public UnityEngine.UI.Button FearButton;
+    public UnityEngine.UI.Button DisgustButton;
+    public UnityEngine.UI.Button SadnessButton;
+    public UnityEngine.UI.Button SurpriseButton;
+
+    Dictionary<string, UnityEngine.UI.Button> emotionButtons = new Dictionary<string, UnityEngine.UI.Button>();
     #endregion
 
     #region accessors
@@ -40,6 +57,40 @@ public class EE_UI : MonoBehaviour {
     {
         get{return decisionAgent;}
         set{ decisionAgent = value; }
+    }
+
+    public string CurrentUserEmotion
+    {
+        get
+        {
+            return currentUserEmotion;
+        }
+    }
+
+    public string CurrentECAEmotion
+    {
+        get
+        {
+            return currentECAEmotion;
+        }
+
+        set
+        {
+            currentECAEmotion = value;
+        }
+    }
+
+    public string CurrentECAStrategy
+    {
+        get
+        {
+            return currentECAStrategy;
+        }
+
+        set
+        {
+            currentECAStrategy = value;
+        }
     }
     #endregion
 
@@ -53,6 +104,13 @@ public class EE_UI : MonoBehaviour {
         menus.Add(2, radialMenu2Prefab);
         menus.Add(3, radialMenu3Prefab);
         menus.Add(4, radialMenu4Prefab);
+
+        emotionButtons.Add("anger", AngerButton);
+        emotionButtons.Add("joy", JoyButton);
+        emotionButtons.Add("fear", FearButton);
+        emotionButtons.Add("disgust", DisgustButton);
+        emotionButtons.Add("sadness", SadnessButton);
+        emotionButtons.Add("surprise", SurpriseButton);
 
         #endregion
 
@@ -72,6 +130,9 @@ public class EE_UI : MonoBehaviour {
         androidPanel.gameObject.SetActive(false);
         playerPanel.gameObject.SetActive(false);
         finalPanel.gameObject.SetActive(false);
+        emotionPanel.gameObject.SetActive(false);
+        resetEmotionButtons();
+        warningPanel.gameObject.SetActive(false);
     }
 
     #region displayText
@@ -134,11 +195,12 @@ public class EE_UI : MonoBehaviour {
         {//Agent is player
             for (int i = 0; i < choices.Count; i++)
             {
-                print(i + " - " + getNodeInfo(choices[i], "Specification").Split('_')[1] + " - " + getNodeInfo(choices[i], "Message"));
+                print(i + ": " + choices[i].name + " - " + getNodeInfo(choices[i], "Specification").Split('_')[1] + " - " + getNodeInfo(choices[i], "Message"));
                 options.Add(getNodeInfo(choices[i], "Message"));
                 choiceNodes.Add(choices[i]);
             }
             generateRadialMenu(options);
+            emotionPanel.gameObject.SetActive(true);
             decisionPanel.gameObject.SetActive(true);
         }
     }
@@ -168,24 +230,52 @@ public class EE_UI : MonoBehaviour {
         if (currentRadialMenu != null)
             Destroy(currentRadialMenu);
     }
+    
+    public void makeDecision(int dV)
+    {
+        if (emotionSelected != null)
+        {
+            StartCoroutine(makeDecisionCoroutine(dV));
+        }
+        else
+        {
+            warningPanel.gameObject.SetActive(true);
+        }
+    }
 
+    IEnumerator makeDecisionCoroutine(int dV)
+    {
+        decisionValue = dV;
+        decisionPanel.gameObject.SetActive(false);
+        emotionPanel.gameObject.SetActive(false);
+        resetEmotionButtons();
+        yield return new WaitForEndOfFrame();
+        
+        //if (decisionAgent.ControlledByHuman)
+        //    MascaretHumanActions.executeOperation(choiceNodes[decisionValue], decisionAgent);
+
+        MascaretHumanActions.changeConstraintValue(DecisionAgent, "decisionValue", decisionValue);
+    }
+    /*
+    
     public void makeDecision(int dv)
     {
         MascaretHumanActions.changeConstraintValue(DecisionAgent, "decisionValue", dv);
-        decisionValue = dv;
-        if (DecisionAgent.ControlledByHuman)
-            MascaretHumanActions.executeOperation(choiceNodes[dv], DecisionAgent);
+        //decisionValue = dv;
+        //if (DecisionAgent.ControlledByHuman)
+        //    MascaretHumanActions.executeOperation(choiceNodes[dv], DecisionAgent);
 
 
         decisionPanel.gameObject.SetActive(false);
     }
-
+    */
     #endregion
 
     #region buttons
 
     public void choice0_click()
     {
+
         makeDecision(0);
     }
 
@@ -204,6 +294,57 @@ public class EE_UI : MonoBehaviour {
         makeDecision(3);
     }
 
+    public void resetEmotionButtons()
+    {
+        emotionSelected = null;
+        warningPanel.gameObject.SetActive(false);
+        //currentUserEmotion = "";
+        foreach (KeyValuePair<string,UnityEngine.UI.Button> b in emotionButtons)
+            b.Value.interactable = true;
+    }
+
+    public void anger_click()
+    {
+        resetEmotionButtons();
+        emotionSelected = AngerButton;
+        currentUserEmotion = "Anger";
+        AngerButton.interactable = false;
+    }
+    public void joy_click()
+    {
+        resetEmotionButtons();
+        emotionSelected = JoyButton;
+        currentUserEmotion = "Joy";
+        JoyButton.interactable = false;
+    }
+    public void fear_click()
+    {
+        resetEmotionButtons();
+        emotionSelected = FearButton;
+        currentUserEmotion = "Fear";
+        FearButton.interactable = false;
+    }
+    public void Disgust_click()
+    {
+        resetEmotionButtons();
+        emotionSelected = DisgustButton;
+        currentUserEmotion = "Disgust";
+        DisgustButton.interactable = false;
+    }
+    public void sadness_click()
+    {
+        resetEmotionButtons();
+        emotionSelected = SadnessButton;
+        currentUserEmotion = "Sadness";
+        SadnessButton.interactable = false;
+    }
+    public void suprise_click()
+    {
+        resetEmotionButtons();
+        emotionSelected = SurpriseButton;
+        currentUserEmotion = "Surprise";
+        SurpriseButton.interactable = false;
+    }
     #endregion
 
     #region stringCleaners

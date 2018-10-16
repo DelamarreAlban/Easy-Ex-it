@@ -9,8 +9,9 @@ public class VirtualHuman_Agent_FinalOperation : BehaviorExecution {
 
 	public int state = 0;
     public EE_UI ui;
+    webGLCommunication webCom;
 
-	public VirtualHuman_Agent_FinalOperation()
+    public VirtualHuman_Agent_FinalOperation()
 	{
         
     }
@@ -19,6 +20,8 @@ public class VirtualHuman_Agent_FinalOperation : BehaviorExecution {
 	{
 		base.init(specif, host, p,sync);
 
+        webCom = GameObject.Find("webglCom").GetComponent<webGLCommunication>();
+
         ui = GameObject.Find("Canvas").GetComponent<EE_UI>();
         PrintSingleton.Instance.log("==================================== FINAL OPERATION ==========================================");
     }
@@ -26,7 +29,7 @@ public class VirtualHuman_Agent_FinalOperation : BehaviorExecution {
     override public double execute (double dt)
 	{
 		if (state == 0) {
-
+            webCom.sendEndNode("{\"end\":\"end\"}");
             ui.showFinalScreen();
 			state++;
 			return Time.deltaTime;

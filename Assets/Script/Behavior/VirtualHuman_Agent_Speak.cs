@@ -8,6 +8,7 @@ using System.Linq;
 public class VirtualHuman_Agent_Speak : BehaviorExecution {
 
 	public string message ="";
+    public string specification = "";
 	public int state;
 
     string audioName = "";
@@ -27,7 +28,12 @@ public class VirtualHuman_Agent_Speak : BehaviorExecution {
 
         ui = GameObject.Find("Canvas").GetComponent<EE_UI>();
         if (Host.name == "PlayerAuto")
+        {
+
+
             agent = GameObject.Find("Player").GetComponent<AgentController>();
+        }
+            
         else
             agent = GameObject.Find(Host.name).GetComponent<AgentController>();
         
@@ -38,7 +44,11 @@ public class VirtualHuman_Agent_Speak : BehaviorExecution {
             {
                 message = stringUtils.CleanString(kvp.Value.getStringFromValue());
             }
-		}
+            else if (kvp.Key == "Specification")
+            {
+                specification = cleanSpec(stringUtils.CleanString(kvp.Value.getStringFromValue()));
+            }
+        }
 
         if (message != "")
         {
@@ -54,6 +64,13 @@ public class VirtualHuman_Agent_Speak : BehaviorExecution {
 
         PrintSingleton.Instance.log("====================================SPEAK==========================================");
         PrintSingleton.Instance.log(agent.name + " --> " + message);
+        
+
+        if (agent is AndroidController)
+        {
+            PrintSingleton.Instance.log("STRATEGY --> " + specification);
+            ui.CurrentECAStrategy = specification;
+        }
     }
 
     override public double execute(double dt)
@@ -68,6 +85,17 @@ public class VirtualHuman_Agent_Speak : BehaviorExecution {
                     audioplay = false;
                 }
                 ui.DisplayText(message, agent);
+                /*
+                Agent m_agent = MascaretUtils.getAgent(Host.name);
+                Debug.Log("===================================   " + m_agent.name);
+                ActionNode currentNode = MascaretUtils.getCurrentActionNode(m_agent);
+                Debug.Log("===================================   " + currentNode.name);
+                List<ActionNode> choices = MascaretUtils.getOutgoingNodes(m_agent, currentNode);
+                foreach (ActionNode n in choices)
+                    Debug.Log("===================================   " + n.name);
+                ActionNode next = MascaretUtils.getNextNodeToExecute(m_agent);
+                Debug.Log(" ========  " + next.name);
+                */
             }
 
             state++;
@@ -79,5 +107,11 @@ public class VirtualHuman_Agent_Speak : BehaviorExecution {
         }
     }
 
+    string cleanSpec(string oldspec)
+    {
+        string[] split = oldspec.Split('_');
+        string strat = split[1];
 
+        return strat;
+    }
 }

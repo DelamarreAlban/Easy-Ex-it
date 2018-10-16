@@ -618,6 +618,7 @@ function divideSpeakNode(node){
                 body.name = node.name + "_speak";
                 body.body = node.body.body;
                 body.operation = op;
+                body.feedback = node.body.feedback;
                 var speakNode = {
                     "id": node.id + "_speak",
                     "name": node.name + "_speak",

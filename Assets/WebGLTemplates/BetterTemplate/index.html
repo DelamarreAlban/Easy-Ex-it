@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+  <head>
+    <meta charset="utf-8">
+    <title>Easy-EX-it</title>
+    <style>
+      html {
+        box-sizing: border-box;
+      }
+      *, *:before, *:after {
+        box-sizing: inherit;
+      }
+      body {
+        margin: 0;
+        background: #444;
+      }
+      #gameContainer {
+        width: 100vw;
+        height: 100vh;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .logo {
+          display: block;
+          width: max-width: 100vw;
+          height: max-height: 70vh;
+      }
+
+      .progress {
+          margin: 1.5em;
+          border: 1px solid white;
+          width: 50vw;
+          display: none;
+      }
+      .progress .full {
+          margin: 2px;
+          background: white;
+          height: 1em;
+          transform-origin: top left;
+      }
+
+      #loader {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .spinner,
+      .spinner:after {
+        border-radius: 50%;
+        width: 5em;
+        height: 5em;
+      }
+      .spinner {
+        margin: 10px;
+        font-size: 10px;
+        position: relative;
+        text-indent: -9999em;
+        border-top: 1.1em solid rgba(255, 255, 255, 0.2);
+        border-right: 1.1em solid rgba(255, 255, 255, 0.2);
+        border-bottom: 1.1em solid rgba(255, 255, 255, 0.2);
+        border-left: 1.1em solid #ffffff;
+        transform: translateZ(0);
+        animation: spinner-spin 1.1s infinite linear;
+      }
+      @keyframes spinner-spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <div id="gameContainer"></div>
+    <div id="loader">
+      <!-- <img class="logo" src="logo.png"> -->
+      <div class="spinner"></div>
+      <div class="progress"><div class="full"></div></div>
+    </div>
+  </body>
+
+  <script src="%UNITY_WEBGL_LOADER_URL%"></script>
+  <script>
+  var gameInstance = UnityLoader.instantiate("gameContainer", "%UNITY_WEBGL_BUILD_URL%", {onProgress: UnityProgress});
+  function UnityProgress(gameInstance, progress) {
+    if (!gameInstance.Module) {
+      return;
+    }
+    const loader = document.querySelector("#loader");
+    if (!gameInstance.progress) {
+      const progress = document.querySelector("#loader .progress");
+      progress.style.display = "block";
+      gameInstance.progress = progress.querySelector(".full");
+      loader.querySelector(".spinner").style.display = "none";
+    }
+    gameInstance.progress.style.transform = `scaleX(${progress})`;
+    if (progress === 1 && !gameInstance.removeTimeout) {
+      gameInstance.removeTimeout = setTimeout(function() {
+          loader.style.display = "none";
+      }, 2000);
+    }
+  }
+
+  // =================== VUE TO IFRAME COMMUNICATION ==================== //
+  window.addEventListener('message', (evt) => {
+    let data = null
+
+    try { data = JSON.parse(evt.data) }
+    catch(error) { return error }
+
+    if(!data || !data.name || !data.format || data.format != 'unityBidirectional') return
+
+    console.log(`[unity] received request from parent`)
+    console.log(data)
+
+    switch(data.name) {
+      case 'startPhase': startPhase(data.phase); break
+      default: break
+    }
+  })
+  // ==================================================================== //
+
+  // ================== UNITY TO IFRAME COMMUNICATION =================== //
+
+  function sendChoice(choice) {
+    console.log(`[unity] sent sendChoice to website`)
+    content = JSON.parse(choice)
+    let message = { name: 'sendChoice', content, format: 'unityBidirectional' }
+    let json = JSON.stringify(message)
+    console.log(json)
+    window.parent.postMessage(json, '*')
+  }
+  function sendEndNode(end) {
+    console.log(`[unity] sent sendEndNode to website`)
+    content = JSON.parse(end)
+    let message = { name: 'endNode', content, format: 'unityBidirectional' }
+    let json = JSON.stringify(message)
+    console.log(json)
+    window.parent.postMessage(json, '*')
+  }
+  // ==================================================================== //
+
+  // ================== IFRAME TO UNITY COMMUNICATION =================== //
+
+  // ==================================================================== //
+  </script>
+
+</html>

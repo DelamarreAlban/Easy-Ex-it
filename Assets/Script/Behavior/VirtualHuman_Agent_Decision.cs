@@ -44,8 +44,9 @@ public class VirtualHuman_Agent_Decision : BehaviorExecution {
 
     override public double execute (double dt)
 	{
-        if (state == 0) {
-
+        if (state == 0)
+        {
+            /*
             ActionNode currentNode = MascaretUtils.getCurrentActionNode(agent);
             MascaretHumanActions.changeConstraintValue(ui.DecisionAgent, "decisionValue", -1);
             ui.decisionValue = -1;
@@ -53,23 +54,33 @@ public class VirtualHuman_Agent_Decision : BehaviorExecution {
             MascaretHumanActions.setConstrainedEdges(MascaretUtils.getOutgoingEdges(agent, currentNode));
             PrintSingleton.Instance.log("==================================== DECISION ========================================== " + choices.Count);
             ui.DisplayChoices(choices, agentC);
+            */
+            
+            ActionNode currentNode = MascaretUtils.getCurrentActionNode(agent);
+            PrintSingleton.Instance.log("==================================== DECISION ========================================== " + currentNode.name);
+            MascaretHumanActions.setConstrainedEdges(MascaretUtils.getOutgoingEdges(agent, currentNode));
+            ui.DisplayChoices(MascaretUtils.getOutgoingNodes(agent, currentNode),agentC);
             state++;
 
+            MascaretHumanActions.changeConstraintValue(ui.DecisionAgent, "decisionValue", -1);
+
+
             return Time.deltaTime;
-		} else{            
+        }
+        else {
 
             if (ui.decisionValue != -1)
             {
-                PrintSingleton.Instance.log("|||||||||||||||||||||   DECISION HAVE BEEN MADE : " + ui.decisionValue);
+                PrintSingleton.Instance.log("Decision : " + ui.decisionValue);
                 return 0;
             }
-            else
+            /*else
             {
                 MascaretHumanActions.resetConstraints();
                 return Time.deltaTime;
-            }
-            
-		}
+            }*/
+            return Time.deltaTime;
+        }
 	}
 
 }

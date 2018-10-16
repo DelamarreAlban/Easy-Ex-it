@@ -5,7 +5,7 @@ using UnityEngine;
 public class PrintSingleton {
 
     public bool doPrint = true;
-    public bool doPrintMasc = false;
+    public bool doPrintMasc = true;
     public bool doPrintErr = false;
     public bool doPrintWarn = false;
     public bool doPrintDebug = false;

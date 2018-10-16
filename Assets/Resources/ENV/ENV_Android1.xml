@@ -12,13 +12,7 @@
     <Behavior name ="ProceduralBehavior" start = "true" interval="0.2"/>
   </Human>
 
-  <Human name="Android2" class="Android_Agent" area="EasyExit">
-    <Shape url = "Android2" />
-    <Behavior name ="SimpleCommunicationBehavior" start = "true" interval="0.2"/>
-    <Behavior name ="ProceduralBehavior" start = "true" interval="0.2"/>
-  </Human>
-
-  <Human name="Player" class="Player_Agent" area="EasyExit" controlled="yes">
+  <Human name="Player" class="Player_Agent" area="EasyExit">
   	<Shape url = "Player" />
   	<Behavior name ="SimpleCommunicationBehavior" start = "true" interval="0.2"/>        
   	<Behavior name ="ProceduralBehavior" start = "true" interval="0.2"/>
@@ -40,14 +34,6 @@
       <Port>8080</Port>
     </AID>
   </Affect>
-    <Affect type = "Role">
-      <Role>Android2</Role>
-      <AID>
-        <Name>Android2</Name>
-        <Plateform>localhost</Plateform>
-        <Port>8080</Port>
-      </AID>
-    </Affect>
     <Affect type = "Role">
       	<Role>Player</Role>
         <AID>

@@ -48,13 +48,15 @@ public class UnityVirtualRealityComponentFactory : VirtualRealityComponentFactor
 
     public override void Log (string logMessage)
     {
-        PrintSingleton.Instance.logMasc(logMessage);
+        if(logMessage.Contains("HUSTON"))
+            PrintSingleton.Instance.logMasc(logMessage);
     }
 
+    /*
     public override void notifyFreeze(string node)
     {
         throw new NotImplementedException();
-    }
+    }*/
 
     public override string readFlow (string url)
     {

@@ -58,13 +58,14 @@ public class VirtualHuman_Agent_Choice : BehaviorExecution
 
     string jsonFormatString(string input)
     {
+        EE_UI ui = GameObject.Find("Canvas").GetComponent<EE_UI>();
         string json = "{";
 
-        json += "\"input_emotion\":\"" + "in_emo" + "\",\n";
+        json += "\"input_emotion\":\"" + ui.CurrentECAEmotion + "\",\n";
         json += "\"input_tone\":\"" + "in_tone" + "\",\n";
-        json += "\"input_strategy\":\"" + "in_strat" + "\",\n";
+        json += "\"input_strategy\":\"" + ui.CurrentECAStrategy + "\",\n";
 
-        json += "\"output_emotion\":\"" + "in_emo" + "\",\n";
+        json += "\"output_emotion\":\"" + ui.CurrentUserEmotion + "\",\n";
         json += "\"output_tone\":\"" + "in_tone" + "\",\n";
         json += "\"output_strategy\":\"" + input + "\"";
 

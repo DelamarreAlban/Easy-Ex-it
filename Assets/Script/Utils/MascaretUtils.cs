@@ -20,6 +20,7 @@ public static class MascaretUtils
         {
             foreach (ProcedureExecution procExe in procedureExecutions)
             {
+                
                 List<ActionNode> allActions = procExe.getAllActionsFor(agt.Aid);
                 if (allActions != null)
                 {
@@ -27,6 +28,7 @@ public static class MascaretUtils
                     {
                         if (action.isRunning() && action.CurrentExecution.GetType() == typeof(CallOperationBehaviorExecution))
                         {
+                            Debug.Log(":::::::::::::::::::::::::   " + procExe.procedure.name);
                             return action;
                         }
                     }
@@ -90,11 +92,13 @@ public static class MascaretUtils
     {
         ProceduralBehavior proceduralBehavior = (ProceduralBehavior)(agt.getBehaviorExecutingByName("ProceduralBehavior"));
 
+
         if (proceduralBehavior != null)
         {
             if (node != null)
             {
                 List<ActionNode> outgoNodes = node.getOutgoingActionNode();
+                Debug.Log(outgoNodes.Count);
                 return outgoNodes;
             }
         }
